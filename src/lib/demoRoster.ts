@@ -5,6 +5,7 @@ interface DemoDef {
   nickname?: string;
   position: Position;
   stats: PlayerStats;
+  taunt?: string;
 }
 
 const DEMO_DEFS: DemoDef[] = [
@@ -13,12 +14,14 @@ const DEMO_DEFS: DemoDef[] = [
     nickname: 'The Wall',
     position: 'GK',
     stats: { pace: 2, stamina: 3, finishing: 1, defending: 3, passing: 2, goalkeeping: 5 },
+    taunt: 'Nothing gets past me.',
   },
   {
     name: 'Sofia Reyes',
     nickname: 'Spider',
     position: 'GK',
     stats: { pace: 3, stamina: 3, finishing: 1, defending: 2, passing: 3, goalkeeping: 4 },
+    taunt: 'I have eight hands, apparently.',
   },
   {
     name: 'Jamie Chen',
@@ -40,6 +43,7 @@ const DEMO_DEFS: DemoDef[] = [
     nickname: 'Tank',
     position: 'DEF',
     stats: { pace: 2, stamina: 5, finishing: 1, defending: 5, passing: 2, goalkeeping: 1 },
+    taunt: "You'll feel that tackle tomorrow.",
   },
   {
     name: 'Amara Okafor',
@@ -51,6 +55,7 @@ const DEMO_DEFS: DemoDef[] = [
     nickname: 'Engine',
     position: 'MID',
     stats: { pace: 3, stamina: 5, finishing: 3, defending: 3, passing: 4, goalkeeping: 1 },
+    taunt: "I don't stop running. Ever.",
   },
   {
     name: 'Yuki Tanaka',
@@ -62,6 +67,7 @@ const DEMO_DEFS: DemoDef[] = [
     nickname: 'Sniper',
     position: 'ATT',
     stats: { pace: 4, stamina: 3, finishing: 5, defending: 1, passing: 3, goalkeeping: 1 },
+    taunt: 'One touch, one goal.',
   },
   {
     name: 'Tariq Hassan',
@@ -73,6 +79,7 @@ const DEMO_DEFS: DemoDef[] = [
     nickname: 'Hollywood',
     position: 'ATT',
     stats: { pace: 3, stamina: 2, finishing: 5, defending: 1, passing: 4, goalkeeping: 1 },
+    taunt: "Save it for the highlight reel — that's where I live.",
   },
 ];
 
@@ -85,6 +92,7 @@ export function demoRoster(): Player[] {
     nickname: def.nickname,
     position: def.position,
     stats: def.stats,
+    taunt: def.taunt,
     createdAt: now - (DEMO_DEFS.length - i) * 1000,
   }));
 }

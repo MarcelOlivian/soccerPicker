@@ -52,7 +52,7 @@ describe('exportImport', () => {
   it('round-trips a roster through export and import, rehydrating the photo into a new IndexedDB key', async () => {
     const key = await putImage(stubBlob);
     const players = [
-      makePlayer('p1', { photoKey: key }),
+      makePlayer('p1', { photoKey: key, taunt: 'Nothing gets past me.' }),
       makePlayer('p2', { photoUrl: 'https://example.com/b.jpg', nickname: 'Tank' }),
     ];
     const file = await buildExportFile(players);
@@ -61,8 +61,10 @@ describe('exportImport', () => {
     expect(imported).toHaveLength(2);
     expect(imported[0].photoKey).toBeTruthy();
     expect(imported[0].photoKey).not.toBe(key); // a fresh key, not reusing the original
+    expect(imported[0].taunt).toBe('Nothing gets past me.');
     expect(imported[1].photoUrl).toBe('https://example.com/b.jpg');
     expect(imported[1].nickname).toBe('Tank');
+    expect(imported[1].taunt).toBeUndefined();
   });
 
   it('parseRosterImportFile rejects a file that is not a roster export', async () => {

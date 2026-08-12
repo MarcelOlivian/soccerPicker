@@ -87,6 +87,7 @@ export async function parseRosterImportFile(jsonText: string): Promise<Player[]>
       stats: rest.stats,
       photoUrl: rest.photoUrl,
       photoKey,
+      taunt: rest.taunt,
       createdAt: rest.createdAt ?? Date.now(),
     });
   }

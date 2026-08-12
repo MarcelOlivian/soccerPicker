@@ -97,6 +97,17 @@ export function DraftStage({ onContinue }: DraftStageProps) {
             >
               Restart draft
             </button>
+            <button
+              type="button"
+              className="sp-btn sp-btn--sm sp-btn--ghost"
+              onClick={() => {
+                if (confirm('Change captains? This resets the draft.')) {
+                  dispatch({ type: 'SET_CAPTAINS', captainA: undefined, captainB: undefined });
+                }
+              }}
+            >
+              Change captains
+            </button>
           </div>
         )}
       </div>
@@ -151,7 +162,10 @@ function DraftTeamColumn({ team, players, captainId }: { team: Team; players: Pl
       <div className="sp-draft-column__list">
         {players.map((p) => (
           <div key={p.id} className="sp-draft-column__row">
-            <span>{p.nickname ?? p.name}</span>
+            <span>
+              {p.name}
+              {p.nickname && <span className="sp-card__nickname"> ({p.nickname})</span>}
+            </span>
             {p.id === captainId && <span className="sp-badge">CAPTAIN</span>}
           </div>
         ))}

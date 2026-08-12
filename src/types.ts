@@ -24,6 +24,15 @@ export const STAT_LABELS: Record<StatKey, string> = {
   goalkeeping: 'GKP',
 };
 
+export const STAT_DESCRIPTIONS: Record<StatKey, string> = {
+  pace: 'Pace: how fast a player runs, combining speed and acceleration.',
+  stamina: 'Stamina: how well a player keeps their energy levels up during a match.',
+  finishing: 'Finishing: how accurate and deadly a player is when shooting to score a goal.',
+  defending: 'Defending: overall defensive skills like tackling, marking, and positioning.',
+  passing: 'Passing: the accuracy and vision of short and long passes.',
+  goalkeeping: 'Goalkeeper: the position category for a goalie.',
+};
+
 export type PlayerStats = Record<StatKey, StatValue>;
 
 export interface Player {
@@ -36,6 +45,8 @@ export interface Player {
   photoUrl?: string;
   /** Key into the IndexedDB image store, for uploaded photos. */
   photoKey?: string;
+  /** A short signature line — a taunt, a quote, a thing they always say. */
+  taunt?: string;
   createdAt: number;
 }
 

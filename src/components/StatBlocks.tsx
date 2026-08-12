@@ -1,9 +1,11 @@
-import type { StatValue } from '../types';
+import { STAT_DESCRIPTIONS, STAT_LABELS } from '../types';
+import type { StatKey, StatValue } from '../types';
+import { Tooltip } from './Tooltip';
 
 const LEVELS: StatValue[] = [1, 2, 3, 4, 5];
 
 interface StatBlocksProps {
-  label: string;
+  statKey: StatKey;
   value: StatValue;
 }
 
@@ -12,10 +14,15 @@ interface StatBlocksProps {
  * rather than unicode block glyphs — the empty-state glyph (▯) isn't in
  * JetBrains Mono and falls back to a mismatched tofu box in most browsers.
  */
-export function StatBlocks({ label, value }: StatBlocksProps) {
+export function StatBlocks({ statKey, value }: StatBlocksProps) {
+  const label = STAT_LABELS[statKey];
   return (
     <span className="sp-stat-row">
-      <span className="sp-stat-row__label">{label}</span>
+      <Tooltip content={STAT_DESCRIPTIONS[statKey]}>
+        <span className="sp-stat-row__label" tabIndex={0}>
+          {label}
+        </span>
+      </Tooltip>
       <span className="sp-stat-row__blocks" aria-hidden="true">
         {LEVELS.map((level) => (
           <span key={level} className={`sp-block ${level <= value ? 'sp-block--on' : 'sp-block--off'}`} />

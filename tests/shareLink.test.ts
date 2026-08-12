@@ -16,7 +16,7 @@ function makePlayer(id: string, overrides: Partial<Player> = {}): Player {
 describe('shareLink', () => {
   it('round-trips a roster through build and parse', async () => {
     const players = [
-      makePlayer('p1'),
+      makePlayer('p1', { taunt: 'One touch, one goal.' }),
       makePlayer('p2', { nickname: 'Sniper', photoUrl: 'https://example.com/a.jpg' }),
     ];
     const { url, skippedPhotoCount } = await buildShareLink(players, 'https://app.example/');
@@ -28,8 +28,10 @@ describe('shareLink', () => {
     expect(parsed).not.toBeNull();
     expect(parsed).toHaveLength(2);
     expect(parsed?.[0].name).toBe('Player p1');
+    expect(parsed?.[0].taunt).toBe('One touch, one goal.');
     expect(parsed?.[1].nickname).toBe('Sniper');
     expect(parsed?.[1].photoUrl).toBe('https://example.com/a.jpg');
+    expect(parsed?.[1].taunt).toBeUndefined();
   });
 
   it('counts uploaded photos as skipped and drops photoKey from the link', async () => {
