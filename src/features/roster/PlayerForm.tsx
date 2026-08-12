@@ -3,7 +3,9 @@ import type { FormEvent } from 'react';
 import { PhotoInput } from '../../components/PhotoInput';
 import { StatStepper } from '../../components/StatStepper';
 import type { Player, PlayerStats, Position, StatKey, StatValue } from '../../types';
-import { POSITIONS, STAT_KEYS, STAT_LABELS, emptyStats } from '../../types';
+import { POSITIONS, STAT_KEYS, emptyStats } from '../../types';
+
+const TAUNT_MAX_LENGTH = 140;
 
 interface PlayerFormProps {
   initial?: Player;
@@ -16,6 +18,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [position, setPosition] = useState<Position>(initial?.position ?? 'MID');
   const [stats, setStats] = useState<PlayerStats>(initial?.stats ?? emptyStats());
+  const [taunt, setTaunt] = useState(initial?.taunt ?? '');
   const [photo, setPhoto] = useState<{ photoUrl?: string; photoKey?: string }>({
     photoUrl: initial?.photoUrl,
     photoKey: initial?.photoKey,
@@ -38,6 +41,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       stats,
       photoUrl: photo.photoUrl,
       photoKey: photo.photoKey,
+      taunt: taunt.trim() || undefined,
       createdAt: initial?.createdAt ?? Date.now(),
     };
     onSave(player);
@@ -77,8 +81,22 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
         </div>
         <div className="sp-player-form__stats">
           {STAT_KEYS.map((key) => (
-            <StatStepper key={key} label={STAT_LABELS[key]} value={stats[key]} onChange={(v) => updateStat(key, v)} />
+            <StatStepper key={key} statKey={key} value={stats[key]} onChange={(v) => updateStat(key, v)} />
           ))}
+          <div className="sp-field sp-field--taunt">
+            <label htmlFor="p-taunt">Signature line (optional)</label>
+            <textarea
+              id="p-taunt"
+              value={taunt}
+              onChange={(e) => setTaunt(e.target.value)}
+              maxLength={TAUNT_MAX_LENGTH}
+              rows={4}
+              placeholder="A quote, taunt, or thing they always say…"
+            />
+            <span className="sp-hint">
+              {taunt.length}/{TAUNT_MAX_LENGTH}
+            </span>
+          </div>
         </div>
       </div>
       <div className="sp-player-form__actions">

@@ -222,15 +222,21 @@ a {
 .sp-field input[type='text'],
 .sp-field input[type='url'],
 .sp-field input[type='number'],
-.sp-field select {
+.sp-field select,
+.sp-field textarea {
   background: var(--sp-bg);
   border: var(--sp-border);
   padding: var(--sp-space-2);
   font-family: var(--sp-font-mono);
 }
 
+.sp-field textarea {
+  resize: vertical;
+}
+
 .sp-field input:focus,
 .sp-field select:focus,
+.sp-field textarea:focus,
 .sp-btn:focus-visible,
 .sp-tab:focus-visible {
   outline: 2px solid var(--sp-accent);

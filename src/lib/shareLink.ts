@@ -100,6 +100,7 @@ export async function parseShareLink(hash: string): Promise<Player[] | null> {
       position: p.position ?? 'MID',
       stats: p.stats ?? emptyStats(),
       photoUrl: p.photoUrl,
+      taunt: p.taunt,
       createdAt: p.createdAt ?? Date.now(),
     }));
   } catch {
