@@ -1,0 +1,55 @@
+/*
+ * soccerPicker — "blueprint" theme tokens.
+ * Warm greige canvas, near-black ink, hairline rules, one signal colour per team.
+ * Not a dark theme: this is a deliberate mid-tone, paper-and-drafting-table look.
+ */
+
+:root {
+  /* surfaces */
+  --sp-bg: #c9c6bc;
+  --sp-panel: #d6d3c9;
+  --sp-panel-raised: #ded9cd;
+  --sp-well: #bcb9ae;
+
+  /* ink */
+  --sp-ink: #1c1b18;
+  --sp-ink-soft: #35332d;
+  --sp-muted: #6e6b62;
+  --sp-line: #1c1b18;
+  --sp-line-soft: rgba(28, 27, 24, 0.35);
+  --sp-line-faint: rgba(28, 27, 24, 0.16);
+
+  /* teams / signal */
+  --sp-team-a: #b45309;
+  --sp-team-a-ink: #ffffff;
+  --sp-team-b: #0f5c63;
+  --sp-team-b-ink: #ffffff;
+  --sp-accent: #b45309;
+  --sp-danger: #9b2c2c;
+  --sp-ok: #2f6b3a;
+
+  /* stat blocks */
+  --sp-block-on: var(--sp-ink);
+  --sp-block-off: rgba(28, 27, 24, 0.18);
+
+  /* typography */
+  --sp-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
+    monospace;
+
+  /* geometry — deliberately square, no radii anywhere */
+  --sp-radius: 0px;
+  --sp-border: 1px solid var(--sp-line);
+  --sp-border-soft: 1px solid var(--sp-line-soft);
+  --sp-border-faint: 1px solid var(--sp-line-faint);
+
+  /* spacing scale */
+  --sp-space-1: 4px;
+  --sp-space-2: 8px;
+  --sp-space-3: 12px;
+  --sp-space-4: 16px;
+  --sp-space-5: 24px;
+  --sp-space-6: 32px;
+  --sp-space-7: 48px;
+
+  color-scheme: light;
+}
