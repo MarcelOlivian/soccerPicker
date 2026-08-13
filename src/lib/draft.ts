@@ -1,4 +1,4 @@
-import type { DraftOrder, DraftPick, DraftState, Team } from '../types';
+import type { DraftOrder, DraftPick, DraftState, Player, Team } from '../types';
 
 /**
  * Which team picks next, given the picks made so far.
@@ -56,4 +56,28 @@ export function resetDraft(order: DraftOrder = 'snake'): DraftState {
 /** Short team label from the captain's first name, e.g. "Marcus Webb" -> "Marcus". Falls back to the raw team id if no captain name is available. */
 export function teamShortName(captainName: string | undefined, team: Team): string {
   return captainName ? captainName.trim().split(/\s+/)[0] : team;
+}
+
+function formatTeamBlock(teamName: string, teamPlayers: Player[], captainId: string | undefined): string {
+  const lines = teamPlayers.map((p) => {
+    const nickname = p.nickname ? ` (${p.nickname})` : '';
+    const captainSuffix = p.id === captainId ? ' (captain)' : '';
+    return `- ${p.name}${nickname}${captainSuffix}`;
+  });
+  return `Team ${teamName}\n${lines.join('\n')}`;
+}
+
+/** Plain-text roster grouped by team, e.g. for pasting into a chat. */
+export function formatTeamsList(
+  teamAName: string,
+  teamAPlayers: Player[],
+  captainAId: string | undefined,
+  teamBName: string,
+  teamBPlayers: Player[],
+  captainBId: string | undefined,
+): string {
+  return [
+    formatTeamBlock(teamAName, teamAPlayers, captainAId),
+    formatTeamBlock(teamBName, teamBPlayers, captainBId),
+  ].join('\n\n');
 }

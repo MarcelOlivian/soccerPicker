@@ -56,7 +56,10 @@ export function AttendanceStage({ onContinue }: AttendanceStageProps) {
                   checked={match.attendingIds.includes(p.id)}
                   onChange={() => toggle(p.id)}
                 />
-                <span className="sp-attendance-row__name">{p.nickname ?? p.name}</span>
+                <span className="sp-attendance-row__name">
+                  {p.name}
+                  {p.nickname && <span className="sp-card__nickname"> ({p.nickname})</span>}
+                </span>
                 <span className="sp-badge">{p.position}</span>
               </label>
             ))}

@@ -582,6 +582,13 @@
   color: var(--sp-bg);
 }
 
+/* Signals "the draft's done, come take a look" — only while it isn't already the active step. */
+.sp-breadcrumb__step--ready:not(.sp-breadcrumb__step--active) {
+  background: rgba(47, 107, 58, 0.15);
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
 .sp-stage {
   display: flex;
   flex-direction: column;
@@ -668,6 +675,7 @@
 }
 
 .sp-draft-column {
+  background: var(--sp-panel);
   border: var(--sp-border);
   padding: var(--sp-space-3);
   min-height: 200px;

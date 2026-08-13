@@ -191,6 +191,18 @@ a {
   background: transparent;
 }
 
+/* Signals "this is worth doing now" — e.g. the draft is complete, go check the field. */
+.sp-btn--ready {
+  background: rgba(47, 107, 58, 0.15);
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
+.sp-btn--ready:hover {
+  background: var(--sp-ok);
+  color: #fff;
+}
+
 .sp-btn--sm {
   padding: var(--sp-space-1) var(--sp-space-2);
   font-size: 10px;
