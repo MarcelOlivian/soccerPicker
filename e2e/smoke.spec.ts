@@ -87,6 +87,11 @@ test('copies a roster share link and a fresh session can open it', async ({ page
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
   await page.getByRole('button', { name: 'Copy roster link' }).click();
+  // The click handler awaits buildShareLink() before writing to the
+  // clipboard, so click() resolving doesn't mean the write has landed yet.
+  // Wait for the confirmation banner (shown only after the write resolves)
+  // instead of racing it.
+  await expect(page.getByText('Roster link copied to clipboard.')).toBeVisible();
   const url = await page.evaluate(() => navigator.clipboard.readText());
   expect(url).toContain('#roster=');
 
