@@ -8,6 +8,8 @@ interface TeamColumnProps {
   placements: Placements;
   strength: number;
   selectedPlayerId?: string | null;
+  /** Touch input: native drag competes with the OS's own long-press handling, so it's disabled in favor of tap-to-select. */
+  coarsePointer?: boolean;
   onSelectPlayer: (playerId: string) => void;
   onDropUnassign: (e: DragEvent) => void;
 }
@@ -19,6 +21,7 @@ export function TeamColumn({
   placements,
   strength,
   selectedPlayerId,
+  coarsePointer,
   onSelectPlayer,
   onDropUnassign,
 }: TeamColumnProps) {
@@ -43,7 +46,7 @@ export function TeamColumn({
             compact
             faded={placedIds.has(p.id)}
             selected={selectedPlayerId === p.id}
-            draggable
+            draggable={!coarsePointer}
             onDragStart={(e) => e.dataTransfer.setData('application/x-player-id', p.id)}
             onClick={() => onSelectPlayer(p.id)}
           />

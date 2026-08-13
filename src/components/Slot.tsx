@@ -13,6 +13,8 @@ interface SlotProps {
   isDropTarget: boolean;
   /** The pitch is turned a quarter turn (phone layout), so coordinates transpose. */
   portrait?: boolean;
+  /** Touch input: native drag competes with the OS's own long-press handling, so it's disabled in favor of tap-to-select. */
+  coarsePointer?: boolean;
   onClick: () => void;
   onDrop: (e: DragEvent) => void;
   onCardDragStart: (e: DragEvent) => void;
@@ -26,6 +28,7 @@ export function Slot({
   isSelected,
   isDropTarget,
   portrait = false,
+  coarsePointer,
   onClick,
   onDrop,
   onCardDragStart,
@@ -52,7 +55,7 @@ export function Slot({
             team={slot.team}
             compact
             selected={isSelected}
-            draggable
+            draggable={!coarsePointer}
             onDragStart={onCardDragStart}
           />
           <button

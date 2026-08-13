@@ -33,6 +33,11 @@ export function usePlayerPhotoUrl(player: Player): string | undefined {
 }
 
 const DETAIL_HOVER_DELAY_MS = 1000;
+// Shorter than the mouse-hover delay — the conventional long-press
+// threshold on mobile OSes, so a hold doesn't feel sluggish compared to a
+// native context menu.
+const DETAIL_TOUCH_HOLD_DELAY_MS = 500;
+const TOUCH_MOVE_CANCEL_PX = 10;
 
 interface PlayerCardProps {
   player: Player;
@@ -67,6 +72,8 @@ export function PlayerCard({
 
   const [showDetail, setShowDetail] = useState(false);
   const detailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const longPressFired = useRef(false);
 
   function handleMouseEnter() {
     detailTimer.current = setTimeout(() => setShowDetail(true), DETAIL_HOVER_DELAY_MS);
@@ -76,6 +83,43 @@ export function PlayerCard({
     if (detailTimer.current) clearTimeout(detailTimer.current);
     detailTimer.current = null;
     setShowDetail(false);
+  }
+
+  function handleTouchStart(e: React.TouchEvent) {
+    // Don't hijack a long press meant for the Edit/Dup/Del buttons.
+    if ((e.target as HTMLElement).closest('.sp-card__actions')) return;
+    const touch = e.touches[0];
+    touchStart.current = { x: touch.clientX, y: touch.clientY };
+    longPressFired.current = false;
+    detailTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setShowDetail(true);
+    }, DETAIL_TOUCH_HOLD_DELAY_MS);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchStart.current || !detailTimer.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStart.current.x;
+    const dy = touch.clientY - touchStart.current.y;
+    if (Math.hypot(dx, dy) > TOUCH_MOVE_CANCEL_PX) {
+      clearTimeout(detailTimer.current);
+      detailTimer.current = null;
+    }
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    if (detailTimer.current) {
+      clearTimeout(detailTimer.current);
+      detailTimer.current = null;
+    }
+    if (longPressFired.current) {
+      // A peek, not a tap — suppress the synthetic click this touch would
+      // otherwise produce, so it doesn't also trigger tap-to-select/place.
+      e.preventDefault();
+      setShowDetail(false);
+    }
+    touchStart.current = null;
   }
 
   useEffect(
@@ -97,6 +141,10 @@ export function PlayerCard({
       onClick={onClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       draggable={draggable}
       onDragStart={onDragStart}
       role={onClick ? 'button' : undefined}

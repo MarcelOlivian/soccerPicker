@@ -1083,13 +1083,15 @@
 }
 
 /*
- * Touch devices have no hover, so the hold-to-reveal card popup would fire on
- * a tap-and-hold and then linger until the next tap elsewhere — and in the
- * draft it fights with tap-to-pick. Phone roster cards show their stats
- * inline anyway.
+ * Touch handles its own hold-to-reveal in PlayerCard.tsx (a real long-press,
+ * distinct from mouse hover), which suppresses the synthetic click it would
+ * otherwise also fire — so this doesn't fight tap-to-select/tap-to-place.
+ * These rules stop the OS's own long-press handling (iOS's image-save
+ * callout, text-selection popovers) from competing with it.
  */
-@media (hover: none) {
-  .sp-card__detail {
-    display: none;
-  }
+.sp-card,
+.sp-card * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }

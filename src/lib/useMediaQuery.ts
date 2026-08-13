@@ -50,3 +50,14 @@ export function usePhoneLayout(): boolean {
 export function usePortraitPitch(): boolean {
   return useMediaQuery(BOARD_STACK_QUERY);
 }
+
+/**
+ * True when the primary pointer is imprecise (touch), as opposed to a mouse
+ * or trackpad. Distinct from `hover: none`: this answers "how precise is the
+ * pointer," which is the relevant question for whether native HTML5
+ * drag-and-drop should be offered at all — on touch it competes with the
+ * OS's own long-press handling rather than working reliably.
+ */
+export function useCoarsePointer(): boolean {
+  return useMediaQuery('(pointer: coarse)');
+}
