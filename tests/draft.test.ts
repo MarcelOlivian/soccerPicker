@@ -1,9 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { applyPick, isComplete, nextTeam, remaining, teamShortName, undoPick } from '../src/lib/draft';
-import type { DraftPick, DraftState } from '../src/types';
+import { applyPick, formatTeamsList, isComplete, nextTeam, remaining, teamShortName, undoPick } from '../src/lib/draft';
+import type { DraftPick, DraftState, Player } from '../src/types';
 
 function picks(teams: ('A' | 'B')[]): DraftPick[] {
   return teams.map((team, i) => ({ playerId: `p${i}`, team }));
+}
+
+function makePlayer(id: string, name: string, nickname?: string): Player {
+  return {
+    id,
+    name,
+    nickname,
+    position: 'MID',
+    stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+    createdAt: 0,
+  };
 }
 
 describe('draft order', () => {
@@ -121,5 +132,31 @@ describe('teamShortName', () => {
 
   it('handles a single-word name', () => {
     expect(teamShortName('Pelé', 'A')).toBe('Pelé');
+  });
+});
+
+describe('formatTeamsList', () => {
+  it('groups players by team, marks the captain, and includes nicknames', () => {
+    const alice = makePlayer('a', 'Alice Wong', 'Ace');
+    const bob = makePlayer('b', 'Bob Marsh');
+    const carla = makePlayer('c', 'Carla Diaz', 'Spike');
+
+    const text = formatTeamsList('Alice', [alice, bob], 'a', 'Carla', [carla], 'c');
+
+    expect(text).toBe(
+      [
+        'Team Alice',
+        '- Alice Wong (Ace) (captain)',
+        '- Bob Marsh',
+        '',
+        'Team Carla',
+        '- Carla Diaz (Spike) (captain)',
+      ].join('\n'),
+    );
+  });
+
+  it('handles an empty team', () => {
+    const text = formatTeamsList('Alice', [], undefined, 'Carla', [], undefined);
+    expect(text).toBe('Team Alice\n\n\nTeam Carla\n');
   });
 });

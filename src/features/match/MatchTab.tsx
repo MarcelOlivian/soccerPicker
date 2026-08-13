@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { isComplete } from '../../lib/draft';
+import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import { AttendanceStage } from './AttendanceStage';
 import { BoardStage } from './BoardStage';
@@ -17,6 +19,8 @@ const STAGES: { id: Stage; label: string }[] = [
 export function MatchTab() {
   const [stage, setStage] = useState<Stage>('attendance');
   const { role, synced } = useLive();
+  const { state } = useAppState();
+  const draftComplete = isComplete(state.match.attendingIds, state.match.draft.picks);
 
   // Captain B hasn't received the host's roster/match yet — nothing else is
   // renderable until then, since the board/draft views read from state that
@@ -39,7 +43,9 @@ export function MatchTab() {
           <button
             key={s.id}
             type="button"
-            className={`sp-breadcrumb__step ${stage === s.id ? 'sp-breadcrumb__step--active' : ''}`}
+            className={`sp-breadcrumb__step ${stage === s.id ? 'sp-breadcrumb__step--active' : ''} ${
+              s.id === 'board' && draftComplete ? 'sp-breadcrumb__step--ready' : ''
+            }`}
             onClick={() => setStage(s.id)}
           >
             {i + 1}. {s.label.toUpperCase()}

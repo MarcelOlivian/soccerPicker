@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BalanceMeter } from '../../components/BalanceMeter';
 import { PlayerCard } from '../../components/PlayerCard';
 import { computeBalance, teamStrength } from '../../lib/balance';
-import { isComplete, nextTeam, picksForTeam, remaining, teamShortName } from '../../lib/draft';
+import { formatTeamsList, isComplete, nextTeam, picksForTeam, remaining, teamShortName } from '../../lib/draft';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { DraftOrder, Player, Team } from '../../types';
@@ -18,6 +18,8 @@ export function DraftStage({ onContinue }: DraftStageProps) {
   const { match, players } = state;
   const byId = new Map(players.map((p) => [p.id, p]));
   const attending = match.attendingIds.map((id) => byId.get(id)).filter((p): p is Player => !!p);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
 
   const captainsSet = !!match.draft.captainA && !!match.draft.captainB;
 
@@ -61,6 +63,25 @@ export function DraftStage({ onContinue }: DraftStageProps) {
 
   function pick(id: string) {
     live.applyPick(id);
+  }
+
+  async function handlePrintTeamsList() {
+    const text = formatTeamsList(
+      teamAName,
+      teamAPlayers,
+      match.draft.captainA,
+      teamBName,
+      teamBPlayers,
+      match.draft.captainB,
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setNoticeKind('info');
+      setNotice('Teams list copied to clipboard.');
+    } catch {
+      setNoticeKind('danger');
+      setNotice('Could not access the clipboard.');
+    }
   }
 
   return (
@@ -149,8 +170,28 @@ export function DraftStage({ onContinue }: DraftStageProps) {
 
       {!isClient && (
         <div className="sp-stage__actions">
-          <button type="button" className="sp-btn sp-btn--ghost" onClick={onContinue}>
-            Skip to board →
+          {notice && (
+            <span className={`sp-header-notice ${noticeKind === 'danger' ? 'sp-header-notice--danger' : ''}`}>
+              {notice}
+              <button
+                type="button"
+                className="sp-header-notice__close"
+                onClick={() => setNotice(null)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </span>
+          )}
+          <button type="button" className="sp-btn sp-btn--ghost" onClick={handlePrintTeamsList}>
+            Print teams list
+          </button>
+          <button
+            type="button"
+            className={`sp-btn sp-btn--ghost ${complete ? 'sp-btn--ready' : ''}`}
+            onClick={onContinue}
+          >
+            Skip to Field →
           </button>
         </div>
       )}
