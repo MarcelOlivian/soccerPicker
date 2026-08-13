@@ -1,4 +1,6 @@
-import { applyPick, resetDraft, undoPick } from '../lib/draft';
+import { autoFillSlots } from '../lib/autoFill';
+import { applyPick, autoDraftRemaining, picksForTeam, resetDraft, undoPick } from '../lib/draft';
+import { formationSlots } from '../lib/formations';
 import type {
   AppState,
   DraftOrder,
@@ -24,6 +26,9 @@ export type Action =
   | { type: 'APPLY_PICK'; playerId: string }
   | { type: 'UNDO_PICK' }
   | { type: 'RESET_DRAFT' }
+  | { type: 'AUTO_DRAFT_REMAINING' }
+  | { type: 'SWAP_DRAFT_TEAMS'; playerIdA: string; playerIdB: string }
+  | { type: 'AUTO_FILL_PLACEMENTS' }
   | { type: 'SET_PLACEMENT'; slotId: string; playerId: string | null }
   | { type: 'SWAP_PLACEMENTS'; slotA: string; slotB: string }
   | { type: 'CLEAR_PLACEMENTS' }
@@ -121,6 +126,60 @@ export function reduce(state: AppState, action: Action): AppState {
         ...state,
         match: { ...state.match, draft: resetDraft(state.match.draft.order), placements: {} },
       };
+
+    case 'AUTO_DRAFT_REMAINING': {
+      const pickedIds = new Set(state.match.draft.picks.map((p) => p.playerId));
+      const byId = new Map(state.players.map((p) => [p.id, p]));
+      const remainingPlayers = state.match.attendingIds
+        .filter((id) => !pickedIds.has(id))
+        .map((id) => byId.get(id))
+        .filter((p): p is Player => !!p);
+      const newPicks = autoDraftRemaining(remainingPlayers, state.match.draft.picks, state.match.draft.order);
+      return {
+        ...state,
+        match: {
+          ...state.match,
+          draft: { ...state.match.draft, picks: [...state.match.draft.picks, ...newPicks] },
+        },
+      };
+    }
+
+    case 'SWAP_DRAFT_TEAMS': {
+      const otherTeam = (t: Team): Team => (t === 'A' ? 'B' : 'A');
+      const picks = state.match.draft.picks.map((p) => {
+        if (p.playerId === action.playerIdA || p.playerId === action.playerIdB) {
+          return { ...p, team: otherTeam(p.team) };
+        }
+        return p;
+      });
+      // A placement made under the old team assignment is no longer valid —
+      // SET_PLACEMENT's sameTeam check would reject any *new* attempt, but
+      // won't retroactively fix an existing one.
+      const placements: Placements = {};
+      for (const [slot, pid] of Object.entries(state.match.placements)) {
+        if (pid === action.playerIdA || pid === action.playerIdB) continue;
+        placements[slot] = pid;
+      }
+      return { ...state, match: { ...state.match, draft: { ...state.match.draft, picks }, placements } };
+    }
+
+    case 'AUTO_FILL_PLACEMENTS': {
+      const byId = new Map(state.players.map((p) => [p.id, p]));
+      const slots = formationSlots(state.match.formation);
+      const placedIds = new Set(Object.values(state.match.placements).filter((id): id is string => !!id));
+      const newPlacements: Placements = {};
+      for (const team of ['A', 'B'] as const) {
+        const emptySlots = slots.filter((s) => s.team === team && !state.match.placements[s.id]);
+        const unplacedPlayers = picksForTeam(state.match.draft.picks, team)
+          .map((p) => byId.get(p.playerId))
+          .filter((p): p is Player => !!p && !placedIds.has(p.id));
+        Object.assign(newPlacements, autoFillSlots(unplacedPlayers, emptySlots));
+      }
+      return {
+        ...state,
+        match: { ...state.match, placements: { ...state.match.placements, ...newPlacements } },
+      };
+    }
 
     case 'SET_PLACEMENT': {
       if (action.playerId !== null && !sameTeam(state, action.playerId, action.slotId)) {

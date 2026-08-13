@@ -168,6 +168,12 @@ export function BoardStage() {
     if (fromSlotId) place(fromSlotId, null);
   }
 
+  function handleAutoFill() {
+    dispatch({ type: 'AUTO_FILL_PLACEMENTS' });
+  }
+
+  const unplacedCount = teamAPlayers.length + teamBPlayers.length - Object.values(match.placements).filter(Boolean).length;
+
   if (teamAPlayers.length === 0 && teamBPlayers.length === 0) {
     return (
       <div className="sp-panel">
@@ -246,6 +252,9 @@ export function BoardStage() {
       </div>
       {!isClient && (
         <div className="sp-stage__actions">
+          <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
+            Auto-fill positions
+          </button>
           <button
             type="button"
             className="sp-btn sp-btn--ghost"
