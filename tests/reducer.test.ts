@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { reduce, teamOf } from '../src/state/reducer';
 import { defaultState } from '../src/lib/storage';
-import type { AppState, Player } from '../src/types';
+import type { AppState, MatchHistoryEntry, Player } from '../src/types';
 
 function makePlayer(id: string): Player {
   return {
@@ -81,6 +81,50 @@ describe('reducer: placement team guard', () => {
     const next = reduce(state, { type: 'SWAP_PLACEMENTS', slotA: 'A-DEF-0', slotB: 'A-MID-0' });
     expect(next.match.placements['A-DEF-0']).toBe('a2');
     expect(next.match.placements['A-MID-0']).toBe('a1');
+  });
+});
+
+function makeHistoryEntry(id: string): MatchHistoryEntry {
+  return {
+    id,
+    date: 1700000000000,
+    formation: '6',
+    teamAName: 'Marcus',
+    teamBName: 'Sofia',
+    teamAPlayers: [],
+    teamBPlayers: [],
+    strengthA: 100,
+    strengthB: 95,
+  };
+}
+
+describe('reducer: match history actions', () => {
+  it('SAVE_MATCH_TO_HISTORY prepends the new entry (newest first)', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1') });
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h2') });
+    expect(state.history.map((h) => h.id)).toEqual(['h2', 'h1']);
+  });
+
+  it('DELETE_HISTORY_ENTRY removes only the matching entry', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1') });
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h2') });
+    state = reduce(state, { type: 'DELETE_HISTORY_ENTRY', id: 'h1' });
+    expect(state.history.map((h) => h.id)).toEqual(['h2']);
+  });
+
+  it('SET_HISTORY_SCORE updates only the matching entry', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1') });
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h2') });
+    state = reduce(state, { type: 'SET_HISTORY_SCORE', id: 'h1', scoreA: 3, scoreB: 2 });
+    const h1 = state.history.find((h) => h.id === 'h1');
+    const h2 = state.history.find((h) => h.id === 'h2');
+    expect(h1?.scoreA).toBe(3);
+    expect(h1?.scoreB).toBe(2);
+    expect(h2?.scoreA).toBeUndefined();
+    expect(h2?.scoreB).toBeUndefined();
   });
 });
 

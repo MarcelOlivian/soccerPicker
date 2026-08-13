@@ -8,10 +8,15 @@ import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
 import { picksForTeam, teamShortName } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
+import { snapshotPlayer } from '../../lib/history';
 import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { Player, Position } from '../../types';
+
+interface BoardStageProps {
+  onStartNewMatch: () => void;
+}
 
 // Native browser autoscroll during HTML5 drag-and-drop is inconsistent
 // across browsers, so this drives it manually while a card from this board
@@ -27,7 +32,7 @@ function assignmentsFor(players: Player[], slotPositionByPlayer: Map<string, Pos
   }));
 }
 
-export function BoardStage() {
+export function BoardStage({ onStartNewMatch }: BoardStageProps) {
   const { state, dispatch } = useAppState();
   const live = useLive();
   const isClient = live.role === 'client';
@@ -35,6 +40,7 @@ export function BoardStage() {
   const byId = new Map(players.map((p) => [p.id, p]));
   const slots = formationSlots(match.formation);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   // Once the board stacks into one column the pitch turns a quarter turn, so
   // the slots get enough room to be tapped individually; wide layouts keep the
   // landscape pitch.
@@ -172,6 +178,37 @@ export function BoardStage() {
     dispatch({ type: 'AUTO_FILL_PLACEMENTS' });
   }
 
+  function handleSaveToHistory() {
+    const entry = {
+      id: crypto.randomUUID(),
+      date: Date.now(),
+      formation: match.formation,
+      teamAName,
+      teamBName,
+      teamAPlayers: teamAPlayers.map((p) =>
+        snapshotPlayer(p, slotPositionByPlayer.get(p.id) ?? p.position, p.id === match.draft.captainA),
+      ),
+      teamBPlayers: teamBPlayers.map((p) =>
+        snapshotPlayer(p, slotPositionByPlayer.get(p.id) ?? p.position, p.id === match.draft.captainB),
+      ),
+      strengthA,
+      strengthB,
+    };
+    dispatch({ type: 'SAVE_MATCH_TO_HISTORY', entry });
+    setNotice('Match saved to history.');
+  }
+
+  function handleStartNewMatch() {
+    if (
+      confirm(
+        'Start a new match? This clears the current draft and pitch. Save to history first if you want to keep a record of this one.',
+      )
+    ) {
+      dispatch({ type: 'RESET_MATCH' });
+      onStartNewMatch();
+    }
+  }
+
   const unplacedCount = teamAPlayers.length + teamBPlayers.length - Object.values(match.placements).filter(Boolean).length;
 
   if (teamAPlayers.length === 0 && teamBPlayers.length === 0) {
@@ -252,6 +289,19 @@ export function BoardStage() {
       </div>
       {!isClient && (
         <div className="sp-stage__actions">
+          {notice && (
+            <span className="sp-header-notice">
+              {notice}
+              <button
+                type="button"
+                className="sp-header-notice__close"
+                onClick={() => setNotice(null)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </span>
+          )}
           <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
             Auto-fill positions
           </button>
@@ -263,6 +313,12 @@ export function BoardStage() {
             }}
           >
             Clear placements
+          </button>
+          <button type="button" className="sp-btn sp-btn--ghost" onClick={handleSaveToHistory}>
+            Save to history
+          </button>
+          <button type="button" className="sp-btn sp-btn--ghost" onClick={handleStartNewMatch}>
+            Start new match
           </button>
         </div>
       )}

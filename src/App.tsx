@@ -2,16 +2,18 @@ import { useState } from 'react';
 import { ConnectionChip } from './components/ConnectionChip';
 import { HeaderControls } from './components/HeaderControls';
 import { Tabs } from './components/Tabs';
+import { HistoryTab } from './features/history/HistoryTab';
 import { MatchTab } from './features/match/MatchTab';
 import { RosterTab } from './features/roster/RosterTab';
 import { AppProvider, useAppState } from './state/AppContext';
 import { LiveProvider } from './state/LiveContext';
 
-type TabId = 'setup' | 'match';
+type TabId = 'setup' | 'match' | 'history';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'setup', label: 'Setup' },
   { id: 'match', label: 'Match' },
+  { id: 'history', label: 'History' },
 ];
 
 export default function App() {
@@ -56,7 +58,9 @@ function AppShell() {
             </button>
           </div>
         )}
-        {activeTab === 'setup' ? <RosterTab /> : <MatchTab />}
+        {activeTab === 'setup' && <RosterTab />}
+        {activeTab === 'match' && <MatchTab />}
+        {activeTab === 'history' && <HistoryTab />}
       </main>
     </div>
   );

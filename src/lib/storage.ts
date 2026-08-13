@@ -4,7 +4,7 @@ import { emptyMatch } from '../types';
 const STORAGE_KEY = 'soccerpicker.v1';
 
 export function defaultState(): AppState {
-  return { schemaVersion: 1, players: [], match: emptyMatch() };
+  return { schemaVersion: 2, players: [], match: emptyMatch(), history: [] };
 }
 
 /**
@@ -25,19 +25,26 @@ export class StorageQuotaError extends Error {
 
 /**
  * Reshapes whatever was persisted into a valid current-shape AppState.
- * There is only one schema version so far; this is the seam where a future
- * version bump gets a real migration instead of silently discarding data.
+ * v1 (pre-history) payloads are upgraded by backfilling an empty history
+ * list — this is the seam the old comment here called out, now exercised
+ * for the first time.
  */
 function migrate(raw: unknown): AppState {
   if (!raw || typeof raw !== 'object') return defaultState();
-  const obj = raw as Partial<AppState>;
-  if (obj.schemaVersion !== 1) return defaultState();
+  const obj = raw as {
+    schemaVersion?: number;
+    players?: AppState['players'];
+    match?: Partial<AppState['match']>;
+    history?: AppState['history'];
+  };
+  if (obj.schemaVersion !== 1 && obj.schemaVersion !== 2) return defaultState();
   if (!Array.isArray(obj.players)) return defaultState();
   if (!obj.match || typeof obj.match !== 'object') return defaultState();
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     players: obj.players,
     match: { ...emptyMatch(), ...obj.match },
+    history: Array.isArray(obj.history) ? obj.history : [],
   };
 }
 
