@@ -2,7 +2,7 @@
 
 .sp-card {
   position: relative;
-  width: 200px;
+  width: var(--sp-card-w);
   background: var(--sp-panel-raised);
   border: var(--sp-border);
   display: flex;
@@ -10,7 +10,7 @@
 }
 
 .sp-card--compact {
-  width: 140px;
+  width: var(--sp-card-compact-w);
 }
 
 .sp-card[role='button'] {
@@ -267,8 +267,8 @@
 
 /* Stat pips, shared by the read-only StatBlocks row and the interactive StatStepper. */
 .sp-block {
-  width: 7px;
-  height: 12px;
+  width: var(--sp-block-w);
+  height: var(--sp-block-h);
   display: inline-block;
   border: 1px solid var(--sp-ink);
 }
@@ -825,6 +825,18 @@
   border: var(--sp-border);
 }
 
+/*
+ * Stacked layout: the pitch turns a quarter turn so Team A defends the top
+ * edge. Capped in width because the portrait aspect ratio would otherwise make
+ * a tablet-width pitch over 1200px tall — far past what fits on a screen.
+ */
+.sp-pitch--portrait {
+  aspect-ratio: 60 / 100;
+  min-height: 440px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
 .sp-pitch__lines {
   position: absolute;
   inset: 0;
@@ -841,7 +853,7 @@
 .sp-slot {
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 92px;
+  width: var(--sp-slot-w);
   cursor: pointer;
 }
 
@@ -850,7 +862,7 @@
 }
 
 .sp-slot__card .sp-card {
-  width: 92px;
+  width: var(--sp-slot-w);
   cursor: grab;
 }
 
@@ -868,8 +880,8 @@
 }
 
 .sp-slot__placeholder {
-  width: 76px;
-  height: 76px;
+  width: calc(var(--sp-slot-w) - 16px);
+  height: calc(var(--sp-slot-w) - 16px);
   margin: 0 auto;
   border: 1px dashed var(--sp-line-soft);
   background: rgba(255, 255, 255, 0.15);
@@ -897,6 +909,187 @@
     flex-wrap: wrap;
   }
   .sp-team-column .sp-card {
-    width: 140px;
+    width: var(--sp-card-compact-w);
+  }
+
+  /*
+   * Pitch sizing travels with the stacked board, not with the phone
+   * breakpoint: a landscape pitch loses the width its slots need as soon as it
+   * stops sitting between two team columns, so tablets and split-screen
+   * windows need the portrait treatment just as much as phones do.
+   */
+  :root {
+    --sp-slot-w: 88px;
+  }
+
+  /*
+   * Pitch cards drop the photo here. With it, a compact card is ~103px tall
+   * while adjacent slots are only ~61px apart vertically, so DEF and MID cards
+   * overlap and taps land on the wrong slot. Without it the card is ~49px and
+   * every slot clears its neighbours. The photo is still one tap away on the
+   * same player's card in the team column.
+   */
+  .sp-slot__card .sp-card__photo {
+    display: none;
+  }
+
+  .sp-slot__placeholder {
+    height: 44px;
+  }
+
+  .sp-slot__clear {
+    top: -8px;
+    right: -8px;
+    width: 24px;
+    height: 24px;
+    line-height: 22px;
+  }
+}
+
+/* ---------- phone layout ----------
+ *
+ * Keep this breakpoint in sync with PHONE_QUERY in src/lib/useMediaQuery.ts —
+ * the board reads it in JS to decide whether to render the pitch portrait.
+ */
+@media (max-width: 700px) {
+  :root {
+    /* Cards go fluid in a two-column grid, so --sp-card-w stops mattering
+     * here; the compact card shrinks to fit three across the draft deck. */
+    --sp-card-compact-w: 104px;
+    --sp-block-w: 5px;
+    --sp-block-h: 10px;
+  }
+
+  /* --- roster grid: two fluid columns of mini cards --- */
+  .sp-player-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-space-2);
+  }
+
+  .sp-player-grid .sp-card {
+    width: 100%;
+  }
+
+  .sp-card__overall {
+    font-size: 18px;
+  }
+
+  .sp-card__name {
+    font-size: 11px;
+  }
+
+  /*
+   * A square photo is over half a card's height once cards go two-up, which
+   * drops the grid to two visible players. A 4:3 plate keeps the framing
+   * recognisable while fitting four-plus on screen.
+   */
+  .sp-card__photo {
+    margin: var(--sp-space-1) var(--sp-space-2);
+    aspect-ratio: 4 / 3;
+  }
+
+  .sp-card__head {
+    padding: var(--sp-space-1) var(--sp-space-2) 0;
+  }
+
+  .sp-card__actions {
+    padding: var(--sp-space-1) var(--sp-space-2) var(--sp-space-2);
+  }
+
+  /* Page chrome above the grid competes for the same vertical space. */
+  .sp-roster-tab__header {
+    margin-bottom: var(--sp-space-3);
+  }
+
+  .sp-roster-tab__header h2 {
+    font-size: 18px;
+  }
+
+  .sp-roster-toolbar {
+    margin-bottom: var(--sp-space-3);
+  }
+
+  /*
+   * A text input carries an intrinsic min-width from its default size, and the
+   * sort select can't shrink below its longest option ("Sort: Position"), so
+   * together they push past a 360px viewport. Letting the input shrink below
+   * its intrinsic width is enough to keep the row on one line.
+   */
+  .sp-roster-toolbar input[type='text'] {
+    min-width: 0;
+  }
+
+  .sp-card__stats {
+    gap: 2px var(--sp-space-1);
+    padding: var(--sp-space-1) var(--sp-space-2) var(--sp-space-2);
+    font-size: 10px;
+  }
+
+  .sp-stat-row__label {
+    width: 22px;
+  }
+
+  .sp-monogram {
+    font-size: 22px;
+  }
+
+  /* The draft deck stays a wrapping flex row of fixed-width compact cards. */
+  .sp-player-grid--compact {
+    display: flex;
+    flex-wrap: wrap;
+  }
+
+  .sp-player-grid--compact .sp-card {
+    width: var(--sp-card-compact-w);
+  }
+
+  /* --- draft stage --- */
+  .sp-draft-header__controls {
+    flex-wrap: wrap;
+  }
+
+  .sp-draft-columns {
+    gap: var(--sp-space-3);
+  }
+
+  /* The available deck is what you act on, so it leads; teams follow. */
+  .sp-draft-deck {
+    order: -1;
+  }
+
+  .sp-draft-column,
+  .sp-team-column {
+    min-height: 0;
+  }
+
+  .sp-captain-picker {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* --- board stage --- */
+  .sp-team-column__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-space-2);
+    align-items: start;
+  }
+
+  .sp-team-column .sp-card {
+    width: 100%;
+  }
+
+}
+
+/*
+ * Touch devices have no hover, so the hold-to-reveal card popup would fire on
+ * a tap-and-hold and then linger until the next tap elsewhere — and in the
+ * draft it fights with tap-to-pick. Phone roster cards show their stats
+ * inline anyway.
+ */
+@media (hover: none) {
+  .sp-card__detail {
+    display: none;
   }
 }

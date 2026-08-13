@@ -81,3 +81,17 @@ export function formationSlots(formationId: FormationId): SlotDef[] {
 export function slotsForTeam(formationId: FormationId, team: Team): SlotDef[] {
   return formationSlots(formationId).filter((s) => s.team === team);
 }
+
+/**
+ * Where a slot sits inside the pitch box, as CSS percentages.
+ *
+ * Landscape is the authored orientation: x runs from Team A's goal line to
+ * Team B's, y runs top to bottom. Portrait (used on phones, where a wide
+ * pitch leaves the slots overlapping) rotates the whole pitch a quarter turn
+ * clockwise so Team A defends the top edge: (x, y) -> (1 - y, x). The pitch
+ * SVG applies the equivalent transform, so lines and slots stay aligned.
+ */
+export function slotCoords(slot: Pick<SlotDef, 'x' | 'y'>, portrait: boolean): { left: string; top: string } {
+  const [x, y] = portrait ? [1 - slot.y, slot.x] : [slot.x, slot.y];
+  return { left: `${x * 100}%`, top: `${y * 100}%` };
+}

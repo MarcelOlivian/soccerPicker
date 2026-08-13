@@ -8,6 +8,7 @@ import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
 import { picksForTeam } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
+import { usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { Player, Position } from '../../types';
@@ -27,6 +28,10 @@ export function BoardStage() {
   const byId = new Map(players.map((p) => [p.id, p]));
   const slots = formationSlots(match.formation);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
+  // Once the board stacks into one column the pitch turns a quarter turn, so
+  // the slots get enough room to be tapped individually; wide layouts keep the
+  // landscape pitch.
+  const portrait = usePortraitPitch();
 
   const teamAPlayers = picksForTeam(match.draft.picks, 'A')
     .map((p) => byId.get(p.playerId))
@@ -133,11 +138,12 @@ export function BoardStage() {
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
-        <Pitch>
+        <Pitch portrait={portrait}>
           {slots.map((slot) => (
             <Slot
               key={slot.id}
               slot={slot}
+              portrait={portrait}
               player={match.placements[slot.id] ? byId.get(match.placements[slot.id]!) : undefined}
               isSelected={selectedPlayerId === match.placements[slot.id]}
               isDropTarget={!!selectedPlayerId && (!selectedPlayerTeam || slot.team === selectedPlayerTeam)}

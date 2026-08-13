@@ -287,6 +287,38 @@ a {
   white-space: nowrap;
 }
 
+/*
+ * Phone layout: the header and page gutters otherwise eat most of the first
+ * screen before a single player card shows. Keep in sync with PHONE_QUERY in
+ * src/lib/useMediaQuery.ts.
+ */
+@media (max-width: 700px) {
+  .sp-header {
+    gap: var(--sp-space-3);
+    padding: var(--sp-space-2) var(--sp-space-3);
+  }
+
+  .sp-header__brand small {
+    display: none;
+  }
+
+  .sp-header__spacer {
+    display: none;
+  }
+
+  .sp-header__controls {
+    gap: var(--sp-space-1);
+  }
+
+  .sp-tab {
+    padding: var(--sp-space-1) var(--sp-space-3);
+  }
+
+  .sp-main {
+    padding: var(--sp-space-3);
+  }
+}
+
 @media print {
   /*
    * Aimed at printing the finished lineup off the board stage: keep the
