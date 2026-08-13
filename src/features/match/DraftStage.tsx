@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BalanceMeter } from '../../components/BalanceMeter';
 import { PlayerCard } from '../../components/PlayerCard';
 import { computeBalance, teamStrength } from '../../lib/balance';
-import { isComplete, nextTeam, picksForTeam, remaining } from '../../lib/draft';
+import { isComplete, nextTeam, picksForTeam, remaining, teamShortName } from '../../lib/draft';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { DraftOrder, Player, Team } from '../../types';
@@ -41,6 +41,9 @@ export function DraftStage({ onContinue }: DraftStageProps) {
   const turnTeam = nextTeam(match.draft.picks, match.draft.order);
   const complete = isComplete(match.attendingIds, match.draft.picks);
 
+  const teamAName = teamShortName(byId.get(match.draft.captainA!)?.name, 'A');
+  const teamBName = teamShortName(byId.get(match.draft.captainB!)?.name, 'B');
+
   const teamAPlayers = picksForTeam(match.draft.picks, 'A')
     .map((p) => byId.get(p.playerId))
     .filter((p): p is Player => !!p);
@@ -66,7 +69,7 @@ export function DraftStage({ onContinue }: DraftStageProps) {
         <div className="sp-draft-header__turn">
           {complete
             ? 'DRAFT COMPLETE'
-            : `TEAM ${turnTeam} PICKS · ${match.draft.picks.length} OF ${match.attendingIds.length}`}
+            : `TEAM ${(turnTeam === 'A' ? teamAName : teamBName).toUpperCase()} PICKS · ${match.draft.picks.length} OF ${match.attendingIds.length}`}
         </div>
         {!isClient && (
           <div className="sp-draft-header__controls">
@@ -112,14 +115,14 @@ export function DraftStage({ onContinue }: DraftStageProps) {
         )}
       </div>
 
-      <BalanceMeter result={balance} />
+      <BalanceMeter result={balance} teamNames={{ A: teamAName, B: teamBName }} />
 
       <div className="sp-draft-columns">
         <DraftTeamColumn team="A" players={teamAPlayers} captainId={match.draft.captainA} />
         <div className="sp-draft-deck">
           <h4>Available ({remainingIds.length})</h4>
           {isClient && !myTurn && !complete && (
-            <div className="sp-banner sp-banner--info">WAITING FOR TEAM A</div>
+            <div className="sp-banner sp-banner--info">WAITING FOR TEAM {teamAName.toUpperCase()}</div>
           )}
           <div className="sp-player-grid sp-player-grid--compact">
             {remainingIds.map((id) => {
@@ -156,9 +159,10 @@ export function DraftStage({ onContinue }: DraftStageProps) {
 }
 
 function DraftTeamColumn({ team, players, captainId }: { team: Team; players: Player[]; captainId?: string }) {
+  const captain = players.find((p) => p.id === captainId);
   return (
     <div className="sp-draft-column" data-team={team}>
-      <h4>Team {team}</h4>
+      <h4>Team {teamShortName(captain?.name, team)}</h4>
       <div className="sp-draft-column__list">
         {players.map((p) => (
           <div key={p.id} className="sp-draft-column__row">

@@ -6,7 +6,7 @@ import { Slot } from '../../components/Slot';
 import { TeamColumn } from '../../components/TeamColumn';
 import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
-import { picksForTeam } from '../../lib/draft';
+import { picksForTeam, teamShortName } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
 import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
@@ -118,6 +118,9 @@ export function BoardStage() {
   const strengthB = teamStrength(assignmentsFor(teamBPlayers, slotPositionByPlayer));
   const balance = computeBalance(strengthA, strengthB);
 
+  const teamAName = teamShortName(byId.get(match.draft.captainA ?? '')?.name, 'A');
+  const teamBName = teamShortName(byId.get(match.draft.captainB ?? '')?.name, 'B');
+
   function place(slotId: string, playerId: string | null) {
     live.setPlacement(slotId, playerId);
   }
@@ -175,7 +178,7 @@ export function BoardStage() {
 
   return (
     <div className="sp-stage">
-      <BalanceMeter result={balance} />
+      <BalanceMeter result={balance} teamNames={{ A: teamAName, B: teamBName }} />
       {coarsePointer && <p className="sp-hint">Tap a player, then tap a pitch spot to place them.</p>}
       {/*
         A single catch-all dragover handler on the whole board area. Per the
@@ -200,29 +203,34 @@ export function BoardStage() {
           placements={match.placements}
           strength={strengthA}
           selectedPlayerId={selectedPlayerId}
+          captainId={match.draft.captainA}
           coarsePointer={coarsePointer}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
         <Pitch portrait={portrait}>
-          {slots.map((slot) => (
-            <Slot
-              key={slot.id}
-              slot={slot}
-              portrait={portrait}
-              coarsePointer={coarsePointer}
-              player={match.placements[slot.id] ? byId.get(match.placements[slot.id]!) : undefined}
-              isSelected={selectedPlayerId === match.placements[slot.id]}
-              isDropTarget={!!selectedPlayerId && (!selectedPlayerTeam || slot.team === selectedPlayerTeam)}
-              onClick={() => handleSlotClick(slot)}
-              onDrop={(e) => handleDrop(e, slot.id)}
-              onCardDragStart={(e) => {
-                e.dataTransfer.setData('application/x-player-id', match.placements[slot.id] ?? '');
-                e.dataTransfer.setData('application/x-from-slot', slot.id);
-              }}
-              onClear={() => place(slot.id, null)}
-            />
-          ))}
+          {slots.map((slot) => {
+            const occupant = match.placements[slot.id];
+            return (
+              <Slot
+                key={slot.id}
+                slot={slot}
+                portrait={portrait}
+                coarsePointer={coarsePointer}
+                player={occupant ? byId.get(occupant) : undefined}
+                isSelected={selectedPlayerId === occupant}
+                isCaptain={!!occupant && (occupant === match.draft.captainA || occupant === match.draft.captainB)}
+                isDropTarget={!!selectedPlayerId && (!selectedPlayerTeam || slot.team === selectedPlayerTeam)}
+                onClick={() => handleSlotClick(slot)}
+                onDrop={(e) => handleDrop(e, slot.id)}
+                onCardDragStart={(e) => {
+                  e.dataTransfer.setData('application/x-player-id', occupant ?? '');
+                  e.dataTransfer.setData('application/x-from-slot', slot.id);
+                }}
+                onClear={() => place(slot.id, null)}
+              />
+            );
+          })}
         </Pitch>
         <TeamColumn
           team="B"
@@ -230,6 +238,7 @@ export function BoardStage() {
           placements={match.placements}
           strength={strengthB}
           selectedPlayerId={selectedPlayerId}
+          captainId={match.draft.captainB}
           coarsePointer={coarsePointer}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}

@@ -57,6 +57,15 @@
   background: var(--sp-team-b);
 }
 
+/* Field stage only — makes the captain's card easy to spot in a team panel or on the pitch. */
+.sp-card--captain[data-team='A'] {
+  background: var(--sp-team-a-tint);
+}
+
+.sp-card--captain[data-team='B'] {
+  background: var(--sp-team-b-tint);
+}
+
 .sp-card__head {
   display: flex;
   align-items: center;
@@ -773,9 +782,18 @@
 
 /* ---------- board stage ---------- */
 
+/*
+ * Field on top spanning the full width, two team panels below it — see the
+ * `grid-template-areas` reset in the max-width:900px block below, which
+ * falls back to the original A / pitch / B source-order stacking once the
+ * panels no longer have room to sit side by side.
+ */
 .sp-board-layout {
   display: grid;
-  grid-template-columns: 200px 1fr 200px;
+  grid-template-columns: 1fr 1fr;
+  grid-template-areas:
+    'field field'
+    'teamA teamB';
   gap: var(--sp-space-4);
   align-items: start;
 }
@@ -788,10 +806,12 @@
 
 .sp-team-column[data-team='A'] {
   border-top: 4px solid var(--sp-team-a);
+  grid-area: teamA;
 }
 
 .sp-team-column[data-team='B'] {
   border-top: 4px solid var(--sp-team-b);
+  grid-area: teamB;
 }
 
 .sp-team-column__head {
@@ -807,10 +827,10 @@
 }
 
 .sp-team-column__list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: var(--sp-space-2);
-  align-items: center;
+  align-items: start;
 }
 
 .sp-team-column .sp-card {
@@ -821,8 +841,15 @@
   position: relative;
   width: 100%;
   aspect-ratio: 100 / 60;
-  background: var(--sp-panel);
+  background: repeating-linear-gradient(
+    90deg,
+    var(--sp-pitch-green) 0,
+    var(--sp-pitch-green) 40px,
+    var(--sp-pitch-green-alt) 40px,
+    var(--sp-pitch-green-alt) 80px
+  );
   border: var(--sp-border);
+  grid-area: field;
 }
 
 /*
@@ -903,8 +930,22 @@
 @media (max-width: 900px) {
   .sp-board-layout {
     grid-template-columns: 1fr;
+    grid-template-areas: none;
+  }
+  /*
+   * grid-template-areas: none on the container above does NOT undo a
+   * child's own grid-area — that's a separate property on a different
+   * element. Reset each child explicitly (matching or exceeding their
+   * base-rule specificity) so they fall back to plain auto-placement in
+   * DOM order: TeamColumn A, then the pitch, then TeamColumn B.
+   */
+  .sp-pitch,
+  .sp-team-column[data-team='A'],
+  .sp-team-column[data-team='B'] {
+    grid-area: auto;
   }
   .sp-team-column__list {
+    display: flex;
     flex-direction: row;
     flex-wrap: wrap;
   }

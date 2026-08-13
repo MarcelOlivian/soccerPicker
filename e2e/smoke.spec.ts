@@ -49,9 +49,30 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
   // slot rather than "any" empty slot — dropping a GK onto the GK slot
   // would legitimately produce a zero rating delta (same position), which
   // wouldn't demonstrate the position-aware re-rating this is meant to show.
+  //
+  // The field now sits full-width above the team panels, so the source card
+  // and target slot are usually far enough apart vertically that a one-shot
+  // dragTo() doesn't land — real usage relies on the autoscroll-while-
+  // dragging behavior near the viewport edge, so this steps the mouse and
+  // pauses the same way a real drag would, giving that loop time to run.
   const teamACard = page.locator('.sp-team-column[data-team="A"] .sp-card').first();
   const targetSlot = page.getByRole('button', { name: /^DEF slot, empty$/ }).first();
-  await teamACard.dragTo(targetSlot);
+  await teamACard.scrollIntoViewIfNeeded();
+  const cardBox = await teamACard.boundingBox();
+  if (!cardBox) throw new Error('Team A card has no bounding box');
+  const sx = cardBox.x + cardBox.width / 2;
+  const sy = cardBox.y + cardBox.height / 2;
+  await page.mouse.move(sx, sy);
+  await page.mouse.down();
+  await page.mouse.move(sx, sy - 40, { steps: 5 });
+  for (let i = 0; i < 60; i++) {
+    await page.mouse.move(sx, 40, { steps: 1 });
+    await page.waitForTimeout(20);
+  }
+  const targetBox = await targetSlot.boundingBox();
+  if (!targetBox) throw new Error('Target DEF slot has no bounding box');
+  await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 10 });
+  await page.mouse.up();
 
   await expect(page.locator('.sp-slot--filled')).toHaveCount(1);
   // Placing a player at their slot's position re-rates them there, so the

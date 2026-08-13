@@ -52,3 +52,8 @@ export function undoPick(state: DraftState): DraftState {
 export function resetDraft(order: DraftOrder = 'snake'): DraftState {
   return { order, picks: [] };
 }
+
+/** Short team label from the captain's first name, e.g. "Marcus Webb" -> "Marcus". Falls back to the raw team id if no captain name is available. */
+export function teamShortName(captainName: string | undefined, team: Team): string {
+  return captainName ? captainName.trim().split(/\s+/)[0] : team;
+}

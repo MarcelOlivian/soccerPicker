@@ -46,6 +46,8 @@ interface PlayerCardProps {
   team?: Team;
   selected?: boolean;
   faded?: boolean;
+  /** This player is one of the two draft captains — given a slightly tinted background. */
+  isCaptain?: boolean;
   onClick?: () => void;
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent) => void;
@@ -59,6 +61,7 @@ export function PlayerCard({
   team,
   selected,
   faded,
+  isCaptain,
   onClick,
   draggable,
   onDragStart,
@@ -133,6 +136,7 @@ export function PlayerCard({
   if (compact) classes.push('sp-card--compact');
   if (selected) classes.push('sp-card--selected');
   if (faded) classes.push('sp-card--faded');
+  if (isCaptain) classes.push('sp-card--captain');
 
   return (
     <article

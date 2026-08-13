@@ -28,6 +28,14 @@
   --sp-danger: #9b2c2c;
   --sp-ok: #2f6b3a;
 
+  /* Captain card highlight on the Field stage — same rgba-tint pattern as the banners below. */
+  --sp-team-a-tint: rgba(180, 83, 9, 0.12);
+  --sp-team-b-tint: rgba(15, 92, 99, 0.12);
+
+  /* Field stage pitch — muted, desaturated so it sits with the greige palette rather than fighting it. */
+  --sp-pitch-green: #7e9163;
+  --sp-pitch-green-alt: #748557;
+
   /* stat blocks */
   --sp-block-on: var(--sp-ink);
   --sp-block-off: rgba(28, 27, 24, 0.18);
