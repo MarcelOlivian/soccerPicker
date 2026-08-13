@@ -40,7 +40,7 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
   }
   await expect(page.locator('.sp-draft-header__turn')).toHaveText('DRAFT COMPLETE');
 
-  await page.getByRole('button', { name: /Skip to board/i }).click();
+  await page.getByRole('button', { name: /Skip to Field/i }).click();
   await expect(page.locator('.sp-balance-meter')).toBeVisible();
 
   const strengthBefore = await page.locator('.sp-balance-meter__label[data-team="A"]').innerText();
