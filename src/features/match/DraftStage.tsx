@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { BalanceMeter } from '../../components/BalanceMeter';
 import { PlayerCard } from '../../components/PlayerCard';
 import { computeBalance, teamStrength } from '../../lib/balance';
-import { formatTeamsList, isComplete, nextTeam, picksForTeam, remaining, teamShortName } from '../../lib/draft';
+import {
+  formatTeamsList,
+  isComplete,
+  nextTeam,
+  picksForTeam,
+  remaining,
+  suggestBalanceSwap,
+  teamShortName,
+} from '../../lib/draft';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { DraftOrder, Player, Team } from '../../types';
@@ -65,6 +73,32 @@ export function DraftStage({ onContinue }: DraftStageProps) {
     live.applyPick(id);
   }
 
+  function handleAutoDraft() {
+    if (confirm(`Auto-draft the remaining ${remainingIds.length} player(s)? You can undo picks one at a time afterward.`)) {
+      dispatch({ type: 'AUTO_DRAFT_REMAINING' });
+    }
+  }
+
+  function handleSuggestSwap() {
+    const suggestion = suggestBalanceSwap(teamAPlayers, match.draft.captainA, teamBPlayers, match.draft.captainB);
+    if (!suggestion) {
+      setNoticeKind('info');
+      setNotice('Teams are already as balanced as a single swap can make them.');
+      return;
+    }
+    const playerA = byId.get(suggestion.playerIdA);
+    const playerB = byId.get(suggestion.playerIdB);
+    const label = (p: Player | undefined) => (p ? `${p.name}${p.nickname ? ` (${p.nickname})` : ''}` : '?');
+    if (
+      confirm(
+        `Swap ${label(playerA)} (Team ${teamAName}) and ${label(playerB)} (Team ${teamBName})? ` +
+          `Balance gap would go from ${suggestion.currentDiff} to ${suggestion.newDiff}.`,
+      )
+    ) {
+      dispatch({ type: 'SWAP_DRAFT_TEAMS', playerIdA: suggestion.playerIdA, playerIdB: suggestion.playerIdB });
+    }
+  }
+
   async function handlePrintTeamsList() {
     const text = formatTeamsList(
       teamAName,
@@ -102,6 +136,22 @@ export function DraftStage({ onContinue }: DraftStageProps) {
               <option value="snake">Snake order</option>
               <option value="alternating">Alternating</option>
             </select>
+            <button
+              type="button"
+              className="sp-btn sp-btn--sm"
+              disabled={complete}
+              onClick={handleAutoDraft}
+            >
+              Auto-draft teams
+            </button>
+            <button
+              type="button"
+              className="sp-btn sp-btn--sm"
+              disabled={teamAPlayers.length <= 1 || teamBPlayers.length <= 1}
+              onClick={handleSuggestSwap}
+            >
+              Suggest a swap
+            </button>
             <button
               type="button"
               className="sp-btn sp-btn--sm"

@@ -1,3 +1,4 @@
+import { preferredOverall } from './rating';
 import type { DraftOrder, DraftPick, DraftState, Player, Team } from '../types';
 
 /**
@@ -80,4 +81,78 @@ export function formatTeamsList(
     formatTeamBlock(teamAName, teamAPlayers, captainAId),
     formatTeamBlock(teamBName, teamBPlayers, captainBId),
   ].join('\n\n');
+}
+
+/**
+ * Assigns each remaining player to whichever team's turn it is next,
+ * always taking the strongest remaining player by preferred-position
+ * overall — mirrors a captain always drafting the best player available on
+ * their turn. Reusing the same turn order as manual picks means the final
+ * team sizes come out exactly as manual picking would have produced, with
+ * no separate size bookkeeping needed. Returns only the new picks, in turn
+ * order — the caller appends them to the existing picks.
+ */
+export function autoDraftRemaining(
+  remainingPlayers: Player[],
+  existingPicks: DraftPick[],
+  order: DraftOrder,
+): DraftPick[] {
+  const pool = [...remainingPlayers];
+  const picks = [...existingPicks];
+  const newPicks: DraftPick[] = [];
+
+  while (pool.length > 0) {
+    const team = nextTeam(picks, order);
+    let bestIndex = 0;
+    for (let i = 1; i < pool.length; i++) {
+      if (preferredOverall(pool[i]) > preferredOverall(pool[bestIndex])) bestIndex = i;
+    }
+    const [player] = pool.splice(bestIndex, 1);
+    const pick: DraftPick = { playerId: player.id, team };
+    picks.push(pick);
+    newPicks.push(pick);
+  }
+
+  return newPicks;
+}
+
+export interface SwapSuggestion {
+  playerIdA: string;
+  playerIdB: string;
+  currentDiff: number;
+  newDiff: number;
+}
+
+/**
+ * Finds the single pairwise swap between the two teams' non-captain picks
+ * that most reduces the balance gap (by preferred-position overall).
+ * Captains are never candidates — swapping one to the other team would
+ * strand "Team Marcus" without Marcus. Returns null if no swap improves on
+ * the current difference.
+ */
+export function suggestBalanceSwap(
+  teamAPlayers: Player[],
+  captainAId: string | undefined,
+  teamBPlayers: Player[],
+  captainBId: string | undefined,
+): SwapSuggestion | null {
+  const strengthOf = (players: Player[]) => players.reduce((sum, p) => sum + preferredOverall(p), 0);
+  const baseA = strengthOf(teamAPlayers);
+  const baseB = strengthOf(teamBPlayers);
+  const currentDiff = Math.abs(baseA - baseB);
+
+  let best: SwapSuggestion | null = null;
+  for (const a of teamAPlayers) {
+    if (a.id === captainAId) continue;
+    for (const b of teamBPlayers) {
+      if (b.id === captainBId) continue;
+      const newA = baseA - preferredOverall(a) + preferredOverall(b);
+      const newB = baseB - preferredOverall(b) + preferredOverall(a);
+      const newDiff = Math.abs(newA - newB);
+      if (newDiff < currentDiff && (!best || newDiff < best.newDiff)) {
+        best = { playerIdA: a.id, playerIdB: b.id, currentDiff, newDiff };
+      }
+    }
+  }
+  return best;
 }

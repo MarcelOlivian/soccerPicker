@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { applyPick, formatTeamsList, isComplete, nextTeam, remaining, teamShortName, undoPick } from '../src/lib/draft';
-import type { DraftPick, DraftState, Player } from '../src/types';
+import {
+  applyPick,
+  autoDraftRemaining,
+  formatTeamsList,
+  isComplete,
+  nextTeam,
+  remaining,
+  suggestBalanceSwap,
+  teamShortName,
+  undoPick,
+} from '../src/lib/draft';
+import { preferredOverall } from '../src/lib/rating';
+import type { DraftPick, DraftState, Player, StatValue } from '../src/types';
 
 function picks(teams: ('A' | 'B')[]): DraftPick[] {
   return teams.map((team, i) => ({ playerId: `p${i}`, team }));
@@ -13,6 +24,17 @@ function makePlayer(id: string, name: string, nickname?: string): Player {
     nickname,
     position: 'MID',
     stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+    createdAt: 0,
+  };
+}
+
+/** A player whose overall is the same regardless of position — every stat set to `level`, so the weighted mean (weights always sum to 1) equals `level` everywhere. */
+function makeLeveledPlayer(id: string, level: StatValue): Player {
+  return {
+    id,
+    name: id,
+    position: 'MID',
+    stats: { pace: level, stamina: level, finishing: level, defending: level, passing: level, goalkeeping: level },
     createdAt: 0,
   };
 }
@@ -158,5 +180,84 @@ describe('formatTeamsList', () => {
   it('handles an empty team', () => {
     const text = formatTeamsList('Alice', [], undefined, 'Carla', [], undefined);
     expect(text).toBe('Team Alice\n\n\nTeam Carla\n');
+  });
+});
+
+describe('autoDraftRemaining', () => {
+  it('always takes the strongest remaining player for whichever team is due next', () => {
+    const strong = makeLeveledPlayer('strong', 5); // overall 95
+    const mid = makeLeveledPlayer('mid', 3); // overall 70
+    const weak = makeLeveledPlayer('weak', 1); // overall 45
+
+    // Order in the input shouldn't matter — the function always picks by strength, not array position.
+    const newPicks = autoDraftRemaining([weak, strong, mid], [], 'snake');
+
+    // n=0 (cycle 0) -> A, n=1 (cycle 1) -> B, n=2 (cycle 2) -> B (snake: A B B A...).
+    expect(newPicks).toEqual([
+      { playerId: 'strong', team: 'A' },
+      { playerId: 'mid', team: 'B' },
+      { playerId: 'weak', team: 'B' },
+    ]);
+  });
+
+  it('continues the turn order from the existing picks, not from scratch', () => {
+    // Two picks already made (e.g. the captains) — snake order's 3rd pick (n=2) is B.
+    const existing: DraftPick[] = [
+      { playerId: 'captainA', team: 'A' },
+      { playerId: 'captainB', team: 'B' },
+    ];
+    const a1 = makeLeveledPlayer('a1', 4);
+    const newPicks = autoDraftRemaining([a1], existing, 'snake');
+    expect(newPicks).toEqual([{ playerId: 'a1', team: 'B' }]);
+  });
+
+  it('returns an empty list when there is nobody left to draft', () => {
+    expect(autoDraftRemaining([], [], 'snake')).toEqual([]);
+  });
+});
+
+describe('suggestBalanceSwap', () => {
+  it('finds the single non-captain swap that most reduces the balance gap', () => {
+    const captainA = makeLeveledPlayer('ca', 3); // 70
+    const a1 = makeLeveledPlayer('a1', 1); // 45
+    const captainB = makeLeveledPlayer('cb', 3); // 70
+    const b1 = makeLeveledPlayer('b1', 4); // 83
+    const b2 = makeLeveledPlayer('b2', 2); // 58
+
+    // A: 70+45=115, B: 70+83+58=211, diff=96.
+    const suggestion = suggestBalanceSwap([captainA, a1], 'ca', [captainB, b1, b2], 'cb');
+
+    expect(suggestion).not.toBeNull();
+    expect(suggestion!.playerIdA).toBe('a1');
+    expect(suggestion!.playerIdB).toBe('b1');
+    expect(suggestion!.currentDiff).toBe(96);
+    // A: 115-45+83=153, B: 211-83+45=173, diff=20 — better than the other
+    // candidate pair (a1/b2), which only gets to 70.
+    expect(suggestion!.newDiff).toBe(20);
+  });
+
+  it('never offers a captain as a swap candidate, even when only captains exist', () => {
+    const captainA = makeLeveledPlayer('ca', 5); // 95
+    const captainB = makeLeveledPlayer('cb', 1); // 45
+    // If captains weren't excluded, swapping them would perfectly balance
+    // (diff 50 -> 0) — with no other players to consider, the function must
+    // return null rather than suggest that.
+    expect(suggestBalanceSwap([captainA], 'ca', [captainB], 'cb')).toBeNull();
+  });
+
+  it('returns null when no swap improves on the current balance', () => {
+    const captainA = makeLeveledPlayer('ca', 3);
+    const a1 = makeLeveledPlayer('a1', 3);
+    const captainB = makeLeveledPlayer('cb', 3);
+    const b1 = makeLeveledPlayer('b1', 3);
+    expect(suggestBalanceSwap([captainA, a1], 'ca', [captainB, b1], 'cb')).toBeNull();
+  });
+});
+
+describe('makeLeveledPlayer sanity check', () => {
+  it('produces the expected overall regardless of position weighting', () => {
+    expect(preferredOverall(makeLeveledPlayer('x', 5))).toBe(95);
+    expect(preferredOverall(makeLeveledPlayer('x', 3))).toBe(70);
+    expect(preferredOverall(makeLeveledPlayer('x', 1))).toBe(45);
   });
 });
