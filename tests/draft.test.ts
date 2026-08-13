@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyPick, isComplete, nextTeam, remaining, undoPick } from '../src/lib/draft';
+import { applyPick, isComplete, nextTeam, remaining, teamShortName, undoPick } from '../src/lib/draft';
 import type { DraftPick, DraftState } from '../src/types';
 
 function picks(teams: ('A' | 'B')[]): DraftPick[] {
@@ -105,5 +105,21 @@ describe('remaining / isComplete', () => {
 
   it('isComplete is false for an empty attending list', () => {
     expect(isComplete([], [])).toBe(false);
+  });
+});
+
+describe('teamShortName', () => {
+  it("takes the captain's first name", () => {
+    expect(teamShortName('Marcus Webb', 'A')).toBe('Marcus');
+    expect(teamShortName('Sofia Reyes', 'B')).toBe('Sofia');
+  });
+
+  it('falls back to the raw team id when there is no captain name', () => {
+    expect(teamShortName(undefined, 'A')).toBe('A');
+    expect(teamShortName(undefined, 'B')).toBe('B');
+  });
+
+  it('handles a single-word name', () => {
+    expect(teamShortName('Pelé', 'A')).toBe('Pelé');
   });
 });

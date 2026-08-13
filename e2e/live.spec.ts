@@ -112,7 +112,9 @@ test('host goes live, client joins via the code, and a client pick shows up on t
   });
 
   await client.getByRole('button', { name: /2\. DRAFT/i }).click();
-  await expect(client.locator('.sp-draft-header__turn')).toContainText('TEAM B');
+  // Captain B is Sofia Reyes (attendAndStartDraft picks attending[1] as
+  // captain B), so the turn header now reads her first name.
+  await expect(client.locator('.sp-draft-header__turn')).toContainText('TEAM SOFIA');
 
   const pickedCard = client.locator('.sp-draft-deck .sp-card').first();
   const pickedName = await pickedCard.locator('.sp-card__name').innerText();
@@ -142,7 +144,8 @@ test('an out-of-turn pick from the client is silently rejected', async ({ browse
 
   await client.getByRole('button', { name: /2\. DRAFT/i }).click();
   // It's A's turn (host), so the client's deck should be locked, not clickable.
-  await expect(client.locator('.sp-banner--info')).toHaveText('WAITING FOR TEAM A');
+  // Captain A is Marcus Webb (attendAndStartDraft picks attending[0]).
+  await expect(client.locator('.sp-banner--info')).toHaveText('WAITING FOR TEAM MARCUS');
   await expect(client.locator('.sp-draft-deck .sp-card[role="button"]')).toHaveCount(0);
 
   const picksBefore = await host.locator('.sp-draft-header__turn').innerText();

@@ -15,6 +15,8 @@ interface SlotProps {
   portrait?: boolean;
   /** Touch input: native drag competes with the OS's own long-press handling, so it's disabled in favor of tap-to-select. */
   coarsePointer?: boolean;
+  /** This slot's occupant is one of the two draft captains. */
+  isCaptain?: boolean;
   onClick: () => void;
   onDrop: (e: DragEvent) => void;
   onCardDragStart: (e: DragEvent) => void;
@@ -29,6 +31,7 @@ export function Slot({
   isDropTarget,
   portrait = false,
   coarsePointer,
+  isCaptain,
   onClick,
   onDrop,
   onCardDragStart,
@@ -55,6 +58,7 @@ export function Slot({
             team={slot.team}
             compact
             selected={isSelected}
+            isCaptain={isCaptain}
             draggable={!coarsePointer}
             onDragStart={onCardDragStart}
           />

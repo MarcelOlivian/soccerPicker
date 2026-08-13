@@ -11,7 +11,7 @@ type Stage = 'attendance' | 'draft' | 'board';
 const STAGES: { id: Stage; label: string }[] = [
   { id: 'attendance', label: 'Attendance' },
   { id: 'draft', label: 'Draft' },
-  { id: 'board', label: 'Board' },
+  { id: 'board', label: 'Field' },
 ];
 
 export function MatchTab() {
