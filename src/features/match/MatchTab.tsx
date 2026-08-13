@@ -62,7 +62,7 @@ export function MatchTab() {
           <AttendanceStage onContinue={() => setStage('draft')} />
         ))}
       {stage === 'draft' && <DraftStage onContinue={() => setStage('board')} />}
-      {stage === 'board' && <BoardStage />}
+      {stage === 'board' && <BoardStage onStartNewMatch={() => setStage('attendance')} />}
     </div>
   );
 }

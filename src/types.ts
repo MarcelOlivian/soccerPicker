@@ -78,10 +78,36 @@ export interface MatchState {
   placements: Placements;
 }
 
+/** A player's name/position/overall frozen at the moment a match was saved to history — never a live reference, so editing or deleting a player later can't corrupt a past record. */
+export interface HistoryPlayerSnapshot {
+  id: string;
+  name: string;
+  nickname?: string;
+  position: Position;
+  overall: number;
+  isCaptain: boolean;
+}
+
+export interface MatchHistoryEntry {
+  id: string;
+  /** Date.now() at save time. */
+  date: number;
+  formation: FormationId;
+  teamAName: string;
+  teamBName: string;
+  teamAPlayers: HistoryPlayerSnapshot[];
+  teamBPlayers: HistoryPlayerSnapshot[];
+  strengthA: number;
+  strengthB: number;
+  scoreA?: number;
+  scoreB?: number;
+}
+
 export interface AppState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   players: Player[];
   match: MatchState;
+  history: MatchHistoryEntry[];
 }
 
 export function emptyDraft(order: DraftOrder = 'snake'): DraftState {

@@ -37,7 +37,13 @@ export function createClientSession(deps: ClientSessionDeps): ClientSession {
     switch (message.type) {
       case 'HELLO': {
         const players: Player[] = message.players.map((p) => ({ ...p, photoKey: undefined }));
-        dispatch({ type: 'LOAD_STATE', state: { schemaVersion: 1, players, match: message.match } });
+        // Match history is a personal, per-device record of past matches —
+        // unrelated to the live session's shared player list/match state,
+        // so joining a session must not wipe it.
+        dispatch({
+          type: 'LOAD_STATE',
+          state: { schemaVersion: 2, players, match: message.match, history: getState().history },
+        });
         deps.onHello?.();
         break;
       }

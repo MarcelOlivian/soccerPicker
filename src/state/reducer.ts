@@ -5,6 +5,7 @@ import type {
   AppState,
   DraftOrder,
   FormationId,
+  MatchHistoryEntry,
   MatchState,
   Placements,
   Player,
@@ -33,6 +34,9 @@ export type Action =
   | { type: 'SWAP_PLACEMENTS'; slotA: string; slotB: string }
   | { type: 'CLEAR_PLACEMENTS' }
   | { type: 'RESET_MATCH' }
+  | { type: 'SAVE_MATCH_TO_HISTORY'; entry: MatchHistoryEntry }
+  | { type: 'DELETE_HISTORY_ENTRY'; id: string }
+  | { type: 'SET_HISTORY_SCORE'; id: string; scoreA?: number; scoreB?: number }
   | { type: 'LOAD_STATE'; state: AppState }
   // Live-client only: wholesale-replaces match state from a host STATE
   // broadcast, without touching players (whose photos arrive separately
@@ -223,6 +227,20 @@ export function reduce(state: AppState, action: Action): AppState {
 
     case 'RESET_MATCH':
       return { ...state, match: emptyMatch(state.match.formation) };
+
+    case 'SAVE_MATCH_TO_HISTORY':
+      return { ...state, history: [action.entry, ...state.history] };
+
+    case 'DELETE_HISTORY_ENTRY':
+      return { ...state, history: state.history.filter((h) => h.id !== action.id) };
+
+    case 'SET_HISTORY_SCORE':
+      return {
+        ...state,
+        history: state.history.map((h) =>
+          h.id === action.id ? { ...h, scoreA: action.scoreA, scoreB: action.scoreB } : h,
+        ),
+      };
 
     case 'LOAD_STATE':
       return action.state;
