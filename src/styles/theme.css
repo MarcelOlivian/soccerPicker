@@ -32,6 +32,17 @@
   --sp-block-on: var(--sp-ink);
   --sp-block-off: rgba(28, 27, 24, 0.18);
 
+  /*
+   * Sizes that the phone breakpoint needs to override. Kept here as tokens so
+   * the responsive pass changes them in one place rather than duplicating
+   * every rule that depends on them. These values are the desktop defaults.
+   */
+  --sp-card-w: 200px;
+  --sp-card-compact-w: 140px;
+  --sp-slot-w: 92px;
+  --sp-block-w: 7px;
+  --sp-block-h: 12px;
+
   /* typography */
   --sp-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
     monospace;

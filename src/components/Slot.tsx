@@ -1,5 +1,6 @@
 import type { CSSProperties, DragEvent } from 'react';
 import type { SlotDef } from '../lib/formations';
+import { slotCoords } from '../lib/formations';
 import type { Player } from '../types';
 import { PlayerCard } from './PlayerCard';
 
@@ -10,6 +11,8 @@ interface SlotProps {
   isSelected: boolean;
   /** A player is pending placement, so an empty slot should hint that it's a valid target. */
   isDropTarget: boolean;
+  /** The pitch is turned a quarter turn (phone layout), so coordinates transpose. */
+  portrait?: boolean;
   onClick: () => void;
   onDrop: (e: DragEvent) => void;
   onCardDragStart: (e: DragEvent) => void;
@@ -17,11 +20,18 @@ interface SlotProps {
 }
 
 /** A single pitch position: a drop target when empty, a draggable placed card when filled. */
-export function Slot({ slot, player, isSelected, isDropTarget, onClick, onDrop, onCardDragStart, onClear }: SlotProps) {
-  const style: CSSProperties = {
-    left: `${slot.x * 100}%`,
-    top: `${slot.y * 100}%`,
-  };
+export function Slot({
+  slot,
+  player,
+  isSelected,
+  isDropTarget,
+  portrait = false,
+  onClick,
+  onDrop,
+  onCardDragStart,
+  onClear,
+}: SlotProps) {
+  const style: CSSProperties = slotCoords(slot, portrait);
 
   return (
     <div
