@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DragEvent } from 'react';
 import { BalanceMeter } from '../../components/BalanceMeter';
 import { Pitch } from '../../components/Pitch';
@@ -8,10 +8,17 @@ import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
 import { picksForTeam } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
-import { usePortraitPitch } from '../../lib/useMediaQuery';
+import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { Player, Position } from '../../types';
+
+// Native browser autoscroll during HTML5 drag-and-drop is inconsistent
+// across browsers, so this drives it manually while a card from this board
+// is being dragged near the top/bottom edge of the viewport.
+const AUTOSCROLL_EDGE_PX = 72;
+const AUTOSCROLL_MAX_PX_PER_TICK = 18;
+const AUTOSCROLL_INTERVAL_MS = 16;
 
 function assignmentsFor(players: Player[], slotPositionByPlayer: Map<string, Position>): TeamAssignment[] {
   return players.map((player) => ({
@@ -32,6 +39,57 @@ export function BoardStage() {
   // the slots get enough room to be tapped individually; wide layouts keep the
   // landscape pitch.
   const portrait = usePortraitPitch();
+  // Touch input doesn't get native HTML5 drag — it competes with the OS's own
+  // long-press handling — so touch falls back to tap-to-select-then-tap-slot.
+  const coarsePointer = useCoarsePointer();
+
+  // Autoscroll while dragging a card near the top/bottom edge of the window,
+  // so a card below the fold can reach a pitch slot above it (or vice versa)
+  // without letting go of the drag. Scoped to drags that originate from this
+  // board (via the dragstart flag below) so it never reacts to an unrelated
+  // drag — a file, a browser tab — passing over the page.
+  const dragActive = useRef(false);
+  const pointerY = useRef<number | null>(null);
+
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | null = null;
+
+    function stopScrolling() {
+      dragActive.current = false;
+      pointerY.current = null;
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    function tick() {
+      if (pointerY.current === null) return;
+      const y = pointerY.current;
+      const vh = window.innerHeight;
+      let dy = 0;
+      if (y < AUTOSCROLL_EDGE_PX) {
+        dy = -AUTOSCROLL_MAX_PX_PER_TICK * (1 - y / AUTOSCROLL_EDGE_PX);
+      } else if (y > vh - AUTOSCROLL_EDGE_PX) {
+        dy = AUTOSCROLL_MAX_PX_PER_TICK * (1 - (vh - y) / AUTOSCROLL_EDGE_PX);
+      }
+      if (dy !== 0) window.scrollBy(0, dy);
+    }
+
+    function onWindowDragOver(e: globalThis.DragEvent) {
+      if (!dragActive.current) return;
+      pointerY.current = e.clientY;
+      if (intervalId === null) intervalId = setInterval(tick, AUTOSCROLL_INTERVAL_MS);
+    }
+
+    window.addEventListener('dragover', onWindowDragOver);
+    window.addEventListener('dragend', stopScrolling);
+    return () => {
+      window.removeEventListener('dragover', onWindowDragOver);
+      window.removeEventListener('dragend', stopScrolling);
+      stopScrolling();
+    };
+  }, []);
 
   const teamAPlayers = picksForTeam(match.draft.picks, 'A')
     .map((p) => byId.get(p.playerId))
@@ -118,6 +176,7 @@ export function BoardStage() {
   return (
     <div className="sp-stage">
       <BalanceMeter result={balance} />
+      {coarsePointer && <p className="sp-hint">Tap a player, then tap a pitch spot to place them.</p>}
       {/*
         A single catch-all dragover handler on the whole board area. Per the
         HTML5 DnD spec, a drop is only allowed if the most recent dragover
@@ -128,13 +187,20 @@ export function BoardStage() {
         the board a valid target; the specific Slot/TeamColumn onDrop
         handlers still decide what actually happens.
       */}
-      <div className="sp-board-layout" onDragOver={(e) => e.preventDefault()}>
+      <div
+        className="sp-board-layout"
+        onDragOver={(e) => e.preventDefault()}
+        onDragStart={() => {
+          dragActive.current = true;
+        }}
+      >
         <TeamColumn
           team="A"
           players={teamAPlayers}
           placements={match.placements}
           strength={strengthA}
           selectedPlayerId={selectedPlayerId}
+          coarsePointer={coarsePointer}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
@@ -144,6 +210,7 @@ export function BoardStage() {
               key={slot.id}
               slot={slot}
               portrait={portrait}
+              coarsePointer={coarsePointer}
               player={match.placements[slot.id] ? byId.get(match.placements[slot.id]!) : undefined}
               isSelected={selectedPlayerId === match.placements[slot.id]}
               isDropTarget={!!selectedPlayerId && (!selectedPlayerTeam || slot.team === selectedPlayerTeam)}
@@ -163,6 +230,7 @@ export function BoardStage() {
           placements={match.placements}
           strength={strengthB}
           selectedPlayerId={selectedPlayerId}
+          coarsePointer={coarsePointer}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
