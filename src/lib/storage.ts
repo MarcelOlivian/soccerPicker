@@ -1,3 +1,4 @@
+import { pruneMatchToPlayers } from './matchCleanup';
 import type { AppState } from '../types';
 import { emptyMatch } from '../types';
 
@@ -40,10 +41,16 @@ function migrate(raw: unknown): AppState {
   if (obj.schemaVersion !== 1 && obj.schemaVersion !== 2) return defaultState();
   if (!Array.isArray(obj.players)) return defaultState();
   if (!obj.match || typeof obj.match !== 'object') return defaultState();
+  const match = { ...emptyMatch(), ...obj.match };
   return {
     schemaVersion: 2,
     players: obj.players,
-    match: { ...emptyMatch(), ...obj.match },
+    // A player can be removed by paths that predate pruning match state
+    // against the roster (an older build's roster replace/import, or a
+    // player deleted before that cleanup existed) — heal any leftover
+    // reference on every load so e.g. "N attending tonight" can't be
+    // inflated by ids with no player left to render a checkbox for.
+    match: pruneMatchToPlayers(match, obj.players),
     history: Array.isArray(obj.history) ? obj.history : [],
   };
 }

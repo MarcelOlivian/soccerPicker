@@ -1,6 +1,7 @@
 import { autoFillSlots } from '../lib/autoFill';
 import { applyPick, autoDraftRemaining, picksForTeam, resetDraft, undoPick } from '../lib/draft';
 import { formationSlots } from '../lib/formations';
+import { pruneMatchToPlayers } from '../lib/matchCleanup';
 import type {
   AppState,
   DraftOrder,
@@ -54,12 +55,10 @@ export function reduce(state: AppState, action: Action): AppState {
         players: state.players.map((p) => (p.id === action.player.id ? action.player : p)),
       };
 
-    case 'DELETE_PLAYER':
-      return {
-        ...state,
-        players: state.players.filter((p) => p.id !== action.id),
-        match: removePlayerFromMatch(state.match, action.id),
-      };
+    case 'DELETE_PLAYER': {
+      const players = state.players.filter((p) => p.id !== action.id);
+      return { ...state, players, match: pruneMatchToPlayers(state.match, players) };
+    }
 
     case 'DUPLICATE_PLAYER': {
       const source = state.players.find((p) => p.id === action.id);
@@ -69,15 +68,17 @@ export function reduce(state: AppState, action: Action): AppState {
 
     case 'MERGE_PLAYERS': {
       if (action.mode === 'replace') {
-        return { ...state, players: action.players };
+        return { ...state, players: action.players, match: pruneMatchToPlayers(state.match, action.players) };
       }
       // merge: incoming players with a matching name replace the existing
-      // entry; everything else is appended.
+      // entry (by a possibly-different id — an imported player is a fresh
+      // object); everything else is appended.
       const byName = new Map(state.players.map((p) => [p.name.trim().toLowerCase(), p]));
       for (const incoming of action.players) {
         byName.set(incoming.name.trim().toLowerCase(), incoming);
       }
-      return { ...state, players: Array.from(byName.values()) };
+      const players = Array.from(byName.values());
+      return { ...state, players, match: pruneMatchToPlayers(state.match, players) };
     }
 
     case 'SET_FORMATION':
@@ -251,23 +252,6 @@ export function reduce(state: AppState, action: Action): AppState {
     default:
       return state;
   }
-}
-
-function removePlayerFromMatch(match: AppState['match'], playerId: string): AppState['match'] {
-  const attendingIds = match.attendingIds.filter((id) => id !== playerId);
-  const picks = match.draft.picks.filter((p) => p.playerId !== playerId);
-  const placements: Placements = {};
-  for (const [slot, pid] of Object.entries(match.placements)) {
-    if (pid !== playerId) placements[slot] = pid;
-  }
-  const captainA = match.draft.captainA === playerId ? undefined : match.draft.captainA;
-  const captainB = match.draft.captainB === playerId ? undefined : match.draft.captainB;
-  return {
-    ...match,
-    attendingIds,
-    placements,
-    draft: { ...match.draft, picks, captainA, captainB },
-  };
 }
 
 export function teamOf(state: AppState, playerId: string): Team | undefined {
