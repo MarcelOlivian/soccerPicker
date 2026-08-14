@@ -17,6 +17,13 @@ const PEER_PATH = '/peerjs';
 const APP_PORT = 4301;
 const APP_URL = `http://localhost:${APP_PORT}`;
 
+// playwright.local.config.ts sets fullyParallel:true, which would otherwise
+// hand each test in this file its own worker — and since beforeAll/afterAll
+// spawn one shared peer+preview server pair for the whole file, that would
+// spawn multiple competing servers on the same port/outDir. Force this
+// file's tests to share a single worker so beforeAll runs exactly once.
+test.describe.configure({ mode: 'serial' });
+
 let peerServer: ChildProcess | null = null;
 let previewServer: ChildProcess | null = null;
 
@@ -58,9 +65,30 @@ test.beforeAll(async () => {
   });
   await waitForProcessOutput(peerServer, /PEER_SERVER_READY/, 30_000);
 
-  previewServer = spawn('npm', ['run', 'build', '&&', 'npm', 'run', 'preview', '--', '--port', String(APP_PORT), '--strictPort'], {
+  // Own outDir (not the default `dist`) so this build can't race the
+  // default-config webServer's own `npm run build` writing to the same
+  // folder when both run as part of the same `playwright test` invocation
+  // — playwright.local.config.ts's webServer always starts, regardless of
+  // which spec files were selected to run. Also call `vite build` directly
+  // rather than `npm run build` (which is `tsc -b && vite build`): tsc -b's
+  // incremental cache lives at a *fixed* path
+  // (node_modules/.tmp/*.tsbuildinfo, see tsconfig.*.json) regardless of
+  // --outDir, so two concurrent `tsc -b` runs (this one and the global
+  // webServer's) race on that shared file and can corrupt the build.
+  // Type-checking is already covered by the separate `npx tsc -b` step in
+  // the verification pass, so skipping it here is safe.
+  const buildCmd = 'npx vite build --outDir dist-e2e-live';
+  const previewCmd = `npm run preview -- --port ${APP_PORT} --strictPort --outDir dist-e2e-live`;
+  // detached:true puts this process in its own process group (pgid ===
+  // its own pid) so afterAll can kill the *whole* group below. Without
+  // this, previewServer.kill() only signals the `sh -c` wrapper — its
+  // `vite preview` grandchild (started via `&&`) survives as an orphan
+  // still holding the port, which then serves garbage/nothing to the next
+  // run and fails with net::ERR_HTTP_RESPONSE_CODE_FAILURE.
+  previewServer = spawn(`${buildCmd} && ${previewCmd}`, {
     stdio: 'pipe',
     shell: true,
+    detached: true,
     env: {
       ...process.env,
       VITE_PEERJS_HOST: 'localhost',
@@ -73,7 +101,13 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  previewServer?.kill();
+  if (previewServer?.pid) {
+    try {
+      process.kill(-previewServer.pid, 'SIGKILL'); // negative pid = whole process group
+    } catch {
+      previewServer.kill();
+    }
+  }
   peerServer?.kill();
 });
 
@@ -99,7 +133,7 @@ test('host goes live, client joins via the code, and a client pick shows up on t
   await attendAndStartDraft(host);
   await host.getByRole('button', { name: 'Go live' }).click();
   await expect(host.locator('.sp-connection-chip')).toHaveText('WAITING', { timeout: 15_000 });
-  const sessionCode = await host.locator('.sp-live-panel__code').innerText();
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
 
   await client.goto(APP_URL);
   await client.getByRole('tab', { name: 'Match' }).click();
@@ -120,7 +154,15 @@ test('host goes live, client joins via the code, and a client pick shows up on t
   const pickedName = await pickedCard.locator('.sp-card__name').innerText();
   await pickedCard.click();
 
-  await expect(host.locator('.sp-draft-column[data-team="B"]')).toContainText(pickedName, { timeout: 10_000 });
+  // .sp-card__name renders with CSS text-transform:uppercase, so
+  // .innerText() (which reflects rendered text) returns the uppercase form
+  // while this comparison target renders the same name in its original
+  // mixed case — ignoreCase makes this a same-name check, not a
+  // same-casing check.
+  await expect(host.locator('.sp-draft-column[data-team="B"]')).toContainText(pickedName, {
+    timeout: 10_000,
+    ignoreCase: true,
+  });
 
   await context.close();
 });
@@ -131,10 +173,10 @@ test('an out-of-turn pick from the client is silently rejected', async ({ browse
   const host = await context.newPage();
   const client = await context.newPage();
 
-  await attendAndStartDraft(host); // 2 captain picks -> A's turn next (snake order)
+  await attendAndStartDraft(host); // 2 captain auto-picks: snake order A B B A A B..., so it's B's turn next
   await host.getByRole('button', { name: 'Go live' }).click();
   await expect(host.locator('.sp-connection-chip')).toHaveText('WAITING', { timeout: 15_000 });
-  const sessionCode = await host.locator('.sp-live-panel__code').innerText();
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
 
   await client.goto(APP_URL);
   await client.getByRole('tab', { name: 'Match' }).click();
@@ -143,7 +185,13 @@ test('an out-of-turn pick from the client is silently rejected', async ({ browse
   await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
 
   await client.getByRole('button', { name: /2\. DRAFT/i }).click();
-  // It's A's turn (host), so the client's deck should be locked, not clickable.
+  // The client (captain B) legitimately picks now — it's their turn (the
+  // 3rd pick in the A B B A A B... snake order, right after both captains'
+  // auto-picks) — to advance the turn to captain A (the host) before
+  // testing the lockout.
+  await client.locator('.sp-draft-deck .sp-card').first().click();
+
+  // Now it's A's turn (host), so the client's deck should be locked, not clickable.
   // Captain A is Marcus Webb (attendAndStartDraft picks attending[0]).
   await expect(client.locator('.sp-banner--info')).toHaveText('WAITING FOR TEAM MARCUS');
   await expect(client.locator('.sp-draft-deck .sp-card[role="button"]')).toHaveCount(0);
@@ -163,7 +211,7 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   await attendAndStartDraft(host);
   await host.getByRole('button', { name: 'Go live' }).click();
   await expect(host.locator('.sp-connection-chip')).toHaveText('WAITING', { timeout: 15_000 });
-  const sessionCode = await host.locator('.sp-live-panel__code').innerText();
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
 
   await client.goto(APP_URL);
   await client.getByRole('tab', { name: 'Match' }).click();
@@ -171,7 +219,10 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   await client.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
 
-  // Host makes progress while the client isn't looking.
+  // Host makes progress while the client isn't looking. The host's own
+  // deck is never turn-locked (only the client's is — see DraftStage.tsx's
+  // `myTurn` calc), and right after the 2 captain auto-picks it's team B's
+  // turn (snake order A B B A A B...), so this pick lands on Team B.
   await host.getByRole('button', { name: /2\. DRAFT/i }).click().catch(() => {});
   const hostCard = host.locator('.sp-draft-deck .sp-card').first();
   const hostPickedName = await hostCard.locator('.sp-card__name').innerText();
@@ -187,7 +238,11 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   });
 
   await client.getByRole('button', { name: /2\. DRAFT/i }).click();
-  await expect(client.locator('.sp-draft-column[data-team="A"]')).toContainText(hostPickedName);
+  // Same uppercase-vs-mixed-case mismatch as the other test; team is "B"
+  // per the comment above (the host's pick landed on team B's turn slot).
+  await expect(client.locator('.sp-draft-column[data-team="B"]')).toContainText(hostPickedName, {
+    ignoreCase: true,
+  });
 
   await context.close();
 });

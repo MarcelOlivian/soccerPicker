@@ -1,37 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { PEERJS_SERVER_CONFIG } from '../lib/peerjsConfig';
+import { generateSessionCode } from '../lib/sessionCode';
 import type { ClientSession } from '../sync/clientSession';
 import { createClientSession } from '../sync/clientSession';
 import type { HostSession } from '../sync/hostSession';
 import { createHostSession } from '../sync/hostSession';
-import type { PeerJsServerConfig } from '../sync/peerjsTransport';
 import { PeerJsTransport } from '../sync/peerjsTransport';
 import type { ConnectionStatus, SyncTransport } from '../sync/transport';
 import { useAppState } from './AppContext';
+import { claimSession, releaseSession, SessionConflictError } from './sessionLock';
 
 export type LiveRole = 'solo' | 'host' | 'client';
 export type LiveStatus = ConnectionStatus | 'idle';
-
-const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I — easy to read aloud
-
-function generateSessionCode(): string {
-  let code = '';
-  for (let i = 0; i < 4; i++) code += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  return `SOCCER-${code}`;
-}
-
-// Defaults to PeerJS's public cloud broker. Set VITE_PEERJS_HOST at build
-// time (see e2e/live.spec.ts) to point at a self-hosted/local PeerServer
-// instead — this is the entire override surface if the public broker ever
-// needs replacing.
-const PEERJS_SERVER_CONFIG: PeerJsServerConfig | undefined = import.meta.env.VITE_PEERJS_HOST
-  ? {
-      host: import.meta.env.VITE_PEERJS_HOST,
-      port: Number(import.meta.env.VITE_PEERJS_PORT) || 443,
-      path: import.meta.env.VITE_PEERJS_PATH || '/',
-      secure: import.meta.env.VITE_PEERJS_SECURE === 'true',
-    }
-  : undefined;
 
 interface LiveContextValue {
   role: LiveRole;
@@ -75,8 +56,17 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const goLive = useCallback(() => {
+    try {
+      claimSession('draft');
+    } catch (err) {
+      if (err instanceof SessionConflictError) {
+        setErrorMessage(err.message);
+        return;
+      }
+      throw err;
+    }
     teardown();
-    const code = generateSessionCode();
+    const code = generateSessionCode('SOCCER');
     setSessionCode(code);
     setRole('host');
     setStatus('connecting');
@@ -103,6 +93,15 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   const joinSession = useCallback(
     (code: string) => {
+      try {
+        claimSession('draft');
+      } catch (err) {
+        if (err instanceof SessionConflictError) {
+          setErrorMessage(err.message);
+          return;
+        }
+        throw err;
+      }
       teardown();
       const normalized = code.trim().toUpperCase();
       setSessionCode(normalized);
@@ -148,6 +147,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
 
   const stopLive = useCallback(() => {
     teardown();
+    releaseSession('draft');
     setRole('solo');
     setStatus('idle');
     setSessionCode(null);
@@ -155,7 +155,13 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     setSynced(false);
   }, [teardown]);
 
-  useEffect(() => () => teardown(), [teardown]);
+  useEffect(
+    () => () => {
+      teardown();
+      releaseSession('draft');
+    },
+    [teardown],
+  );
 
   // Broadcast to the client on every match change, whether it came from a
   // local host click or a validated remote PICK/PLACE/SWAP — both paths

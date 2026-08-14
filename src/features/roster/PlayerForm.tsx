@@ -2,8 +2,10 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { PhotoInput } from '../../components/PhotoInput';
 import { StatStepper } from '../../components/StatStepper';
+import { useVoting } from '../../state/VotingContext';
 import type { Player, PlayerStats, Position, StatKey, StatValue } from '../../types';
 import { POSITIONS, STAT_KEYS, emptyStats } from '../../types';
+import { VoteHostPanel } from '../voting/VoteHostPanel';
 
 const TAUNT_MAX_LENGTH = 140;
 
@@ -14,6 +16,11 @@ interface PlayerFormProps {
 }
 
 export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
+  // Computed once (not inline at submit time) so a stats vote started
+  // before the first save uses the exact same id the player is eventually
+  // saved under — the vote subject and the saved Player must be the same
+  // record, not two different ones that happen to share a name.
+  const [playerId] = useState(initial?.id ?? crypto.randomUUID());
   const [name, setName] = useState(initial?.name ?? '');
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [position, setPosition] = useState<Position>(initial?.position ?? 'MID');
@@ -23,8 +30,10 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
     photoUrl: initial?.photoUrl,
     photoKey: initial?.photoKey,
   });
+  const voting = useVoting();
 
   const canSave = name.trim().length > 0;
+  const votingForThisPlayer = voting.role === 'host' && voting.subject?.playerId === playerId;
 
   function updateStat(key: StatKey, value: StatValue) {
     setStats((prev) => ({ ...prev, [key]: value }));
@@ -34,7 +43,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
     e.preventDefault();
     if (!canSave) return;
     const player: Player = {
-      id: initial?.id ?? crypto.randomUUID(),
+      id: playerId,
       name: name.trim(),
       nickname: nickname.trim() || undefined,
       position,
@@ -45,6 +54,38 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       createdAt: initial?.createdAt ?? Date.now(),
     };
     onSave(player);
+  }
+
+  function handleStartVote() {
+    voting.startVote({
+      playerId,
+      name: name.trim(),
+      nickname: nickname.trim() || undefined,
+      position,
+      photoUrl: photo.photoUrl,
+      photoKey: photo.photoKey,
+    });
+  }
+
+  if (votingForThisPlayer) {
+    return (
+      <div className="sp-panel sp-player-form">
+        <h3>{initial ? 'Edit player' : 'New player'} — stats vote</h3>
+        <VoteHostPanel onApplyStats={setStats} />
+        <div className="sp-player-form__actions">
+          <button
+            type="button"
+            className="sp-btn sp-btn--ghost"
+            onClick={() => {
+              voting.endVote();
+              onCancel();
+            }}
+          >
+            Close form
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -103,9 +144,17 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
         <button type="submit" className="sp-btn sp-btn--primary" disabled={!canSave}>
           Save player
         </button>
+        <button type="button" className="sp-btn sp-btn--ghost" disabled={!canSave} onClick={handleStartVote}>
+          Start stats vote
+        </button>
         <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
           Cancel
         </button>
+        {voting.errorMessage && (
+          <span className="sp-hint" role="alert">
+            {voting.errorMessage}
+          </span>
+        )}
       </div>
     </form>
   );
