@@ -7,7 +7,7 @@ function makePlayer(id: string, overrides: Partial<Player> = {}): Player {
     id,
     name: `Player ${id}`,
     position: 'MID',
-    stats: { pace: 3, stamina: 4, finishing: 2, defending: 3, passing: 5, goalkeeping: 1 },
+    stats: { pace: 3, shooting: 2, passing: 5, dribbling: 3, defending: 3, physicality: 4 },
     createdAt: 1700000000000,
     ...overrides,
   };

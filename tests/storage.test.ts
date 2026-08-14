@@ -7,7 +7,7 @@ function makePlayer(id: string): Player {
     id,
     name: `Player ${id}`,
     position: 'MID',
-    stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+    stats: { pace: 3, shooting: 3, passing: 3, dribbling: 3, defending: 3, physicality: 3 },
     createdAt: Date.now(),
   };
 }
@@ -24,7 +24,7 @@ describe('storage', () => {
 
   it('save() then load() round-trips players, match state, and history exactly', () => {
     const state: AppState = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       players: [makePlayer('p1'), makePlayer('p2')],
       match: {
         formation: '6',
@@ -51,32 +51,42 @@ describe('storage', () => {
     expect(loaded).toEqual(state);
   });
 
-  it('load() upgrades a v1 (pre-history) payload by backfilling an empty history list', () => {
-    const player = makePlayer('p1');
+  it('load() discards a pre-v3 payload rather than migrating it (no cross-stat-shape migration)', () => {
+    // schemaVersion 2 predates the FIFA-style stat rename — there's no
+    // sensible field-by-field mapping once goalkeeping disappears as a
+    // stat, so it's simply treated as incompatible rather than half-
+    // migrated into a roster with undefined stat bars.
     localStorage.setItem(
       'soccerpicker.v1',
       JSON.stringify({
-        schemaVersion: 1,
-        players: [player],
+        schemaVersion: 2,
+        players: [
+          {
+            id: 'p1',
+            name: 'Old Shape Player',
+            position: 'MID',
+            stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+            createdAt: 0,
+          },
+        ],
         match: {
           formation: '6',
           attendingIds: ['p1'],
           draft: { order: 'snake', picks: [] },
           placements: {},
         },
+        history: [],
       }),
     );
     const loaded = store.load();
-    expect(loaded.schemaVersion).toBe(2);
-    expect(loaded.history).toEqual([]);
-    expect(loaded.players).toEqual([player]);
+    expect(loaded).toEqual(defaultState());
   });
 
   it('load() heals stale attendingIds referencing a player that no longer exists', () => {
     localStorage.setItem(
       'soccerpicker.v1',
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 3,
         players: [makePlayer('p1'), makePlayer('p2')],
         match: {
           formation: '6',
@@ -107,7 +117,7 @@ describe('storage', () => {
   it('load() falls back to default state when players is missing/malformed', () => {
     localStorage.setItem(
       'soccerpicker.v1',
-      JSON.stringify({ schemaVersion: 1, players: 'nope', match: {} }),
+      JSON.stringify({ schemaVersion: 3, players: 'nope', match: {} }),
     );
     expect(store.load()).toEqual(defaultState());
   });

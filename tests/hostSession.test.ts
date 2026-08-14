@@ -12,7 +12,7 @@ function makePlayer(id: string): Player {
     id,
     name: id,
     position: 'MID',
-    stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+    stats: { pace: 3, shooting: 3, passing: 3, dribbling: 3, defending: 3, physicality: 3 },
     createdAt: 0,
   };
 }

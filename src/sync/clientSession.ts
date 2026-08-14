@@ -42,7 +42,7 @@ export function createClientSession(deps: ClientSessionDeps): ClientSession {
         // so joining a session must not wipe it.
         dispatch({
           type: 'LOAD_STATE',
-          state: { schemaVersion: 2, players, match: message.match, history: getState().history },
+          state: { schemaVersion: 3, players, match: message.match, history: getState().history },
         });
         deps.onHello?.();
         break;

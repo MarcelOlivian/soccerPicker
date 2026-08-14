@@ -23,7 +23,7 @@ function makePlayer(id: string, name: string, nickname?: string): Player {
     name,
     nickname,
     position: 'MID',
-    stats: { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3, goalkeeping: 1 },
+    stats: { pace: 3, shooting: 3, passing: 3, dribbling: 3, defending: 3, physicality: 3 },
     createdAt: 0,
   };
 }
@@ -34,7 +34,7 @@ function makeLeveledPlayer(id: string, level: StatValue): Player {
     id,
     name: id,
     position: 'MID',
-    stats: { pace: level, stamina: level, finishing: level, defending: level, passing: level, goalkeeping: level },
+    stats: { pace: level, shooting: level, passing: level, dribbling: level, defending: level, physicality: level },
     createdAt: 0,
   };
 }

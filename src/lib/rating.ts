@@ -6,38 +6,45 @@ import type { Player, PlayerStats, Position, StatKey } from '../types';
  * makes moving a striker into goal actually cost their team something on
  * the balance meter, instead of the pitch board being pure decoration.
  */
+// There's no dedicated goalkeeping stat (the app runs goalkeeping as a
+// rotating turn, not a specialized role), so GK's row leans on defending
+// (shot-stopping/positioning proxy) and physicality (reflexes/strength
+// proxy) instead of a stat of its own — and leans on them *more heavily*
+// than DEF does, so a natural keeper (high defending/physicality, low
+// everything else) still rates distinctly better at GK than at DEF, where
+// a more even spread across pace/passing pulls a specialist's score down.
 const WEIGHTS: Record<Position, Record<StatKey, number>> = {
   GK: {
-    goalkeeping: 0.45,
-    defending: 0.15,
+    defending: 0.4,
+    physicality: 0.3,
     passing: 0.15,
-    pace: 0.1,
-    stamina: 0.1,
-    finishing: 0.05,
+    pace: 0.05,
+    dribbling: 0.05,
+    shooting: 0.05,
   },
   DEF: {
-    defending: 0.35,
-    stamina: 0.2,
+    defending: 0.3,
+    physicality: 0.2,
     passing: 0.2,
-    pace: 0.15,
-    finishing: 0.1,
-    goalkeeping: 0,
+    pace: 0.2,
+    dribbling: 0.05,
+    shooting: 0.05,
   },
   MID: {
     passing: 0.3,
-    stamina: 0.3,
+    dribbling: 0.2,
+    physicality: 0.2,
     pace: 0.15,
-    finishing: 0.15,
-    defending: 0.1,
-    goalkeeping: 0,
+    shooting: 0.1,
+    defending: 0.05,
   },
   ATT: {
-    finishing: 0.4,
+    shooting: 0.4,
     pace: 0.25,
-    stamina: 0.15,
-    passing: 0.15,
+    dribbling: 0.15,
+    physicality: 0.1,
+    passing: 0.05,
     defending: 0.05,
-    goalkeeping: 0,
   },
 };
 

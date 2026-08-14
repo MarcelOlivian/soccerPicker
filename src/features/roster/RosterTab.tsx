@@ -48,7 +48,7 @@ export function RosterTab() {
         <div className="sp-header__controls">
           {state.players.length === 0 && (
             <button type="button" className="sp-btn" onClick={handleLoadDemo}>
-              Load 12 demo players
+              Load 14 demo players
             </button>
           )}
           <button type="button" className="sp-btn sp-btn--primary" onClick={() => setFormTarget('new')}>

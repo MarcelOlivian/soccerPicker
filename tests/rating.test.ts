@@ -14,31 +14,31 @@ function makePlayer(position: Player['position'], stats: PlayerStats): Player {
 
 const strikerStats: PlayerStats = {
   pace: 5,
-  stamina: 4,
-  finishing: 5,
-  defending: 1,
+  shooting: 5,
   passing: 3,
-  goalkeeping: 1,
+  dribbling: 4,
+  defending: 1,
+  physicality: 4,
 };
 
 const keeperStats: PlayerStats = {
   pace: 2,
-  stamina: 3,
-  finishing: 1,
-  defending: 2,
+  shooting: 1,
   passing: 3,
-  goalkeeping: 5,
+  dribbling: 1,
+  defending: 5,
+  physicality: 4,
 };
 
 describe('rating', () => {
   it('scores a maxed-out 5/5/5/5/5/5 player at 95 in every position', () => {
     const perfect = makePlayer('ATT', {
       pace: 5,
-      stamina: 5,
-      finishing: 5,
-      defending: 5,
+      shooting: 5,
       passing: 5,
-      goalkeeping: 5,
+      dribbling: 5,
+      defending: 5,
+      physicality: 5,
     });
     for (const pos of ['GK', 'DEF', 'MID', 'ATT'] as const) {
       expect(overall(perfect, pos)).toBe(95);
@@ -48,11 +48,11 @@ describe('rating', () => {
   it('scores a bottomed-out 1/1/1/1/1/1 player at 45 in every position', () => {
     const worst = makePlayer('DEF', {
       pace: 1,
-      stamina: 1,
-      finishing: 1,
-      defending: 1,
+      shooting: 1,
       passing: 1,
-      goalkeeping: 1,
+      dribbling: 1,
+      defending: 1,
+      physicality: 1,
     });
     for (const pos of ['GK', 'DEF', 'MID', 'ATT'] as const) {
       expect(overall(worst, pos)).toBe(45);
@@ -95,11 +95,11 @@ describe('rating', () => {
     for (const pos of ['GK', 'DEF', 'MID', 'ATT'] as const) {
       const uniform = makePlayer(pos, {
         pace: 4,
-        stamina: 4,
-        finishing: 4,
-        defending: 4,
+        shooting: 4,
         passing: 4,
-        goalkeeping: 4,
+        dribbling: 4,
+        defending: 4,
+        physicality: 4,
       });
       expect(weightedMean(uniform.stats, pos)).toBeCloseTo(4, 10);
     }

@@ -5,7 +5,7 @@ import { emptyMatch } from '../types';
 const STORAGE_KEY = 'soccerpicker.v1';
 
 export function defaultState(): AppState {
-  return { schemaVersion: 2, players: [], match: emptyMatch(), history: [] };
+  return { schemaVersion: 3, players: [], match: emptyMatch(), history: [] };
 }
 
 /**
@@ -26,9 +26,11 @@ export class StorageQuotaError extends Error {
 
 /**
  * Reshapes whatever was persisted into a valid current-shape AppState.
- * v1 (pre-history) payloads are upgraded by backfilling an empty history
- * list — this is the seam the old comment here called out, now exercised
- * for the first time.
+ * v3's Player.stats shape (FIFA-style pace/shooting/passing/dribbling/
+ * defending/physicality) isn't backwards compatible with v1/v2's — there's
+ * no sensible 1:1 field mapping once goalkeeping disappears as a stat, and
+ * the app is still in alpha, so older payloads are simply discarded rather
+ * than half-migrated into a roster with undefined stat bars.
  */
 function migrate(raw: unknown): AppState {
   if (!raw || typeof raw !== 'object') return defaultState();
@@ -38,12 +40,12 @@ function migrate(raw: unknown): AppState {
     match?: Partial<AppState['match']>;
     history?: AppState['history'];
   };
-  if (obj.schemaVersion !== 1 && obj.schemaVersion !== 2) return defaultState();
+  if (obj.schemaVersion !== 3) return defaultState();
   if (!Array.isArray(obj.players)) return defaultState();
   if (!obj.match || typeof obj.match !== 'object') return defaultState();
   const match = { ...emptyMatch(), ...obj.match };
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     players: obj.players,
     // A player can be removed by paths that predate pruning match state
     // against the roster (an older build's roster replace/import, or a

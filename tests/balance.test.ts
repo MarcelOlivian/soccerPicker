@@ -5,11 +5,11 @@ import type { Player, PlayerStats } from '../src/types';
 function makePlayer(id: string, position: Player['position'], value = 3): Player {
   const stats: PlayerStats = {
     pace: value as PlayerStats['pace'],
-    stamina: value as PlayerStats['stamina'],
-    finishing: value as PlayerStats['finishing'],
-    defending: value as PlayerStats['defending'],
+    shooting: value as PlayerStats['shooting'],
     passing: value as PlayerStats['passing'],
-    goalkeeping: value as PlayerStats['goalkeeping'],
+    dribbling: value as PlayerStats['dribbling'],
+    defending: value as PlayerStats['defending'],
+    physicality: value as PlayerStats['physicality'],
   };
   return { id, name: id, position, stats, createdAt: 0 };
 }
@@ -55,7 +55,7 @@ describe('balance', () => {
       id: 's1',
       name: 'Striker',
       position: 'ATT',
-      stats: { pace: 5, stamina: 4, finishing: 5, defending: 1, passing: 3, goalkeeping: 1 },
+      stats: { pace: 5, shooting: 5, passing: 3, dribbling: 4, defending: 1, physicality: 4 },
       createdAt: 0,
     };
     const asAttacker = teamStrength([{ player: striker, position: 'ATT' }]);

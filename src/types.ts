@@ -6,31 +6,31 @@ export type StatValue = 1 | 2 | 3 | 4 | 5;
 
 export const STAT_KEYS = [
   'pace',
-  'stamina',
-  'finishing',
-  'defending',
+  'shooting',
   'passing',
-  'goalkeeping',
+  'dribbling',
+  'defending',
+  'physicality',
 ] as const;
 
 export type StatKey = (typeof STAT_KEYS)[number];
 
 export const STAT_LABELS: Record<StatKey, string> = {
   pace: 'PAC',
-  stamina: 'STA',
-  finishing: 'FIN',
-  defending: 'DEF',
+  shooting: 'SHO',
   passing: 'PAS',
-  goalkeeping: 'GKP',
+  dribbling: 'DRI',
+  defending: 'DEF',
+  physicality: 'PHY',
 };
 
 export const STAT_DESCRIPTIONS: Record<StatKey, string> = {
-  pace: 'Pace: how fast a player runs, combining speed and acceleration.',
-  stamina: 'Stamina: how well a player keeps their energy levels up during a match.',
-  finishing: 'Finishing: how accurate and deadly a player is when shooting to score a goal.',
-  defending: 'Defending: overall defensive skills like tackling, marking, and positioning.',
-  passing: 'Passing: the accuracy and vision of short and long passes.',
-  goalkeeping: 'Goalkeeper: the position category for a goalie.',
+  pace: 'Pace: overall speed, combining sprint speed and acceleration.',
+  shooting: 'Shooting: overall goal-scoring ability — power, accuracy, and finishing.',
+  passing: 'Passing: short passing, long passing, vision, crossing, and curve.',
+  dribbling: 'Dribbling: agility, balance, composure, ball control, and dribbling skill.',
+  defending: 'Defending: tackling, interceptions, heading, and defensive awareness.',
+  physicality: 'Physicality: strength, jumping, aggression, and endurance.',
 };
 
 export type PlayerStats = Record<StatKey, StatValue>;
@@ -104,7 +104,7 @@ export interface MatchHistoryEntry {
 }
 
 export interface AppState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   players: Player[];
   match: MatchState;
   history: MatchHistoryEntry[];
@@ -126,10 +126,10 @@ export function emptyMatch(formation: FormationId = '6'): MatchState {
 export function emptyStats(): PlayerStats {
   return {
     pace: 3,
-    stamina: 3,
-    finishing: 3,
-    defending: 3,
+    shooting: 3,
     passing: 3,
-    goalkeeping: 1,
+    dribbling: 3,
+    defending: 3,
+    physicality: 3,
   };
 }

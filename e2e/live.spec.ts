@@ -79,7 +79,7 @@ test.afterAll(async () => {
 
 async function attendAndStartDraft(page: import('@playwright/test').Page) {
   await page.goto(APP_URL);
-  await page.getByRole('button', { name: /Load 12 demo players/i }).click();
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await page.getByRole('tab', { name: 'Match' }).click();
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
@@ -107,7 +107,7 @@ test('host goes live, client joins via the code, and a client pick shows up on t
   await client.getByRole('button', { name: 'Join', exact: true }).click();
 
   await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
-  await expect(client.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('12 PLAYERS', {
+  await expect(client.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('14 PLAYERS', {
     timeout: 10_000,
   });
 
@@ -182,7 +182,7 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   await client.getByRole('tab', { name: 'Match' }).click();
   await client.fill('#join-code', sessionCode);
   await client.getByRole('button', { name: 'Join', exact: true }).click();
-  await expect(client.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('12 PLAYERS', {
+  await expect(client.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('14 PLAYERS', {
     timeout: 15_000,
   });
 
