@@ -73,6 +73,14 @@ export function PlayerCard({
   const rating = overall(player, position);
   const delta = atPosition ? overallDelta(player, atPosition) : 0;
 
+  // A dead/unreachable external photoUrl (network hiccup, expired link)
+  // would otherwise render a broken-image icon forever — fall back to the
+  // monogram instead. Resets whenever the URL itself changes, so a fresh
+  // link gets its own chance to load.
+  const [photoFailed, setPhotoFailed] = useState(false);
+  useEffect(() => setPhotoFailed(false), [photoUrl]);
+  const showPhoto = !!photoUrl && !photoFailed;
+
   const [showDetail, setShowDetail] = useState(false);
   const detailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
@@ -181,7 +189,7 @@ export function PlayerCard({
         <span className="sp-badge">{position}</span>
       </div>
       <div className="sp-card__photo">
-        {photoUrl ? <img src={photoUrl} alt="" /> : <Monogram name={player.name} />}
+        {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
       </div>
       <div className="sp-card__name" title={player.name}>
         {player.name}
@@ -202,7 +210,7 @@ export function PlayerCard({
       {showDetail && (
         <div className="sp-card__detail" role="tooltip">
           <div className="sp-card__detail-photo">
-            {photoUrl ? <img src={photoUrl} alt="" /> : <Monogram name={player.name} />}
+            {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
           </div>
           <div className="sp-card__detail-name">
             {player.name}

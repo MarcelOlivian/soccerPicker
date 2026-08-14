@@ -8,7 +8,7 @@ function makeSlot(id: string, position: SlotDef['position']): SlotDef {
 }
 
 function makePlayer(id: string, stats: Partial<Record<keyof Player['stats'], StatValue>>): Player {
-  const base: Player['stats'] = { pace: 1, stamina: 1, finishing: 1, defending: 1, passing: 1, goalkeeping: 1 };
+  const base: Player['stats'] = { pace: 1, shooting: 1, passing: 1, dribbling: 1, defending: 1, physicality: 1 };
   return { id, name: id, position: 'MID', stats: { ...base, ...stats }, createdAt: 0 };
 }
 
@@ -19,9 +19,9 @@ describe('autoFillSlots', () => {
     // optimal assignment uses the two specialists at their specialty and
     // benches the generalist, rather than settling for a "good enough"
     // generalist fit anywhere.
-    const keeper = makePlayer('keeper', { goalkeeping: 5 });
-    const striker = makePlayer('striker', { finishing: 5, pace: 5 });
-    const utility = makePlayer('utility', { pace: 3, stamina: 3, finishing: 3, defending: 3, passing: 3 });
+    const keeper = makePlayer('keeper', { defending: 5, physicality: 5, passing: 5 });
+    const striker = makePlayer('striker', { shooting: 5, pace: 5 });
+    const utility = makePlayer('utility', { pace: 3, shooting: 3, passing: 3, dribbling: 3, defending: 3, physicality: 3 });
     const slots = [makeSlot('gk', 'GK'), makeSlot('att', 'ATT')];
 
     const result = autoFillSlots([utility, keeper, striker], slots);

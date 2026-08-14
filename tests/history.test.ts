@@ -9,7 +9,7 @@ function makeStriker(): Player {
     name: 'Alex Striker',
     nickname: 'Sniper',
     position: 'ATT',
-    stats: { pace: 5, stamina: 3, finishing: 5, defending: 1, passing: 2, goalkeeping: 1 },
+    stats: { pace: 5, shooting: 5, passing: 2, dribbling: 4, defending: 1, physicality: 3 },
     createdAt: 0,
   };
 }

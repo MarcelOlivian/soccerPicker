@@ -11,21 +11,21 @@ test('creates a player manually', async ({ page }) => {
   await expect(page.locator('.sp-card').filter({ hasText: 'Test Striker' })).toBeVisible();
 });
 
-test('loads the 12-player demo roster', async ({ page }) => {
-  await page.getByRole('button', { name: /Load 12 demo players/i }).click();
-  await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(12);
+test('loads the 14-player demo roster', async ({ page }) => {
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
+  await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(14);
 });
 
 test('runs a full 6-a-side draft, places a player on the board, and updates the balance meter', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: /Load 12 demo players/i }).click();
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await page.getByRole('tab', { name: 'Match' }).click();
 
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
   for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
-  await expect(page.getByText('12 attending tonight.')).toBeVisible();
+  await expect(page.getByText('14 attending tonight.')).toBeVisible();
   await page.getByRole('button', { name: /Continue to draft/i }).click();
 
   await page.selectOption('#captain-a', { index: 1 });
@@ -33,7 +33,7 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
   await page.getByRole('button', { name: /Start draft/i }).click();
 
   // Draft everyone by repeatedly taking the first available card.
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 14; i++) {
     const card = page.locator('.sp-draft-deck .sp-card').first();
     if ((await card.count()) === 0) break;
     await card.click();
@@ -81,7 +81,7 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
 });
 
 test('exports a roster and re-imports it after clearing', async ({ page }) => {
-  await page.getByRole('button', { name: /Load 12 demo players/i }).click();
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -91,7 +91,7 @@ test('exports a roster and re-imports it after clearing', async ({ page }) => {
   expect(path).toBeTruthy();
 
   page.on('dialog', (dialog) => dialog.accept());
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 14; i++) {
     const card = page.locator('.sp-player-grid .sp-card').first();
     if ((await card.count()) === 0) break;
     await card.getByRole('button', { name: 'Del' }).click();
@@ -100,11 +100,11 @@ test('exports a roster and re-imports it after clearing', async ({ page }) => {
 
   const importInput = page.locator('input[type=file][accept="application/json"]');
   await importInput.setInputFiles(path as string);
-  await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(12);
+  await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(14);
 });
 
 test('copies a roster share link and a fresh session can open it', async ({ page, context }) => {
-  await page.getByRole('button', { name: /Load 12 demo players/i }).click();
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
 
   await page.getByRole('button', { name: 'Copy roster link' }).click();
@@ -119,5 +119,5 @@ test('copies a roster share link and a fresh session can open it', async ({ page
   const fresh = await context.newPage();
   fresh.once('dialog', (dialog) => dialog.accept()); // accept = replace the (empty) roster
   await fresh.goto(url);
-  await expect(fresh.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('12 PLAYERS');
+  await expect(fresh.locator('.sp-badge').filter({ hasText: 'PLAYERS' })).toHaveText('14 PLAYERS');
 });

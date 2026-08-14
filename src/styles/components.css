@@ -676,6 +676,19 @@
   align-items: start;
 }
 
+/*
+ * Once the window is genuinely maximized (past .sp-main's own 1240px cap
+ * plus its padding), widen the two team panels — the deck drops from 5 to
+ * 4 compact cards per row, trading a column of cards for more room for
+ * long names/badges in the side panels. Left alone below this width so
+ * the "not quite maximized" desktop band doesn't get squeezed instead.
+ */
+@media (min-width: 1300px) {
+  .sp-draft-columns {
+    grid-template-columns: 260px 1fr 260px;
+  }
+}
+
 .sp-draft-column {
   background: var(--sp-panel);
   border: var(--sp-border);
