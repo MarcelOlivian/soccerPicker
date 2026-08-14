@@ -11,6 +11,7 @@ import {
   suggestBalanceSwap,
   teamShortName,
 } from '../../lib/draft';
+import { preferredOverall } from '../../lib/rating';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { DraftOrder, Player, Team } from '../../types';
@@ -261,7 +262,11 @@ function DraftTeamColumn({ team, players, captainId }: { team: Team; players: Pl
               {p.name}
               {p.nickname && <span className="sp-card__nickname"> ({p.nickname})</span>}
             </span>
-            {p.id === captainId && <span className="sp-badge">CAPTAIN</span>}
+            <span className="sp-roster-row__meta">
+              <span className="sp-badge">{p.position}</span>
+              <span className="sp-hint">{preferredOverall(p)}</span>
+              {p.id === captainId && <span className="sp-badge">CAPTAIN</span>}
+            </span>
           </div>
         ))}
         {players.length === 0 && <p className="sp-hint">No picks yet.</p>}

@@ -59,7 +59,7 @@ function AppShell() {
           </div>
         )}
         {activeTab === 'setup' && <RosterTab />}
-        {activeTab === 'match' && <MatchTab />}
+        {activeTab === 'match' && <MatchTab onNavigateToHistory={() => setActiveTab('history')} />}
         {activeTab === 'history' && <HistoryTab />}
       </main>
     </div>

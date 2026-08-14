@@ -121,7 +121,7 @@ function HistoryTeamColumn({ team, name, players }: { team: Team; name: string; 
               {p.name}
               {p.nickname && <span className="sp-card__nickname"> ({p.nickname})</span>}
             </span>
-            <span className="sp-history-entry__player-meta">
+            <span className="sp-roster-row__meta">
               <span className="sp-badge">{p.position}</span>
               <span className="sp-hint">{p.overall}</span>
               {p.isCaptain && <span className="sp-badge">CAPTAIN</span>}
