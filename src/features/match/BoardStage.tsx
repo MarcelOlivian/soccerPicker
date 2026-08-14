@@ -16,6 +16,7 @@ import type { Player, Position } from '../../types';
 
 interface BoardStageProps {
   onStartNewMatch: () => void;
+  onNavigateToHistory: () => void;
 }
 
 // Native browser autoscroll during HTML5 drag-and-drop is inconsistent
@@ -32,7 +33,7 @@ function assignmentsFor(players: Player[], slotPositionByPlayer: Map<string, Pos
   }));
 }
 
-export function BoardStage({ onStartNewMatch }: BoardStageProps) {
+export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageProps) {
   const { state, dispatch } = useAppState();
   const live = useLive();
   const isClient = live.role === 'client';
@@ -40,7 +41,6 @@ export function BoardStage({ onStartNewMatch }: BoardStageProps) {
   const byId = new Map(players.map((p) => [p.id, p]));
   const slots = formationSlots(match.formation);
   const [selectedPlayerId, setSelectedPlayerId] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
   // Once the board stacks into one column the pitch turns a quarter turn, so
   // the slots get enough room to be tapped individually; wide layouts keep the
   // landscape pitch.
@@ -105,9 +105,13 @@ export function BoardStage({ onStartNewMatch }: BoardStageProps) {
     .filter((p): p is Player => !!p);
 
   const slotPositionByPlayer = new Map<string, Position>();
+  const slotIdByPlayer = new Map<string, string>();
   for (const slot of slots) {
     const occupant = match.placements[slot.id];
-    if (occupant) slotPositionByPlayer.set(occupant, slot.position);
+    if (occupant) {
+      slotPositionByPlayer.set(occupant, slot.position);
+      slotIdByPlayer.set(occupant, slot.id);
+    }
   }
 
   const teamAIds = new Set(teamAPlayers.map((p) => p.id));
@@ -142,6 +146,18 @@ export function BoardStage({ onStartNewMatch }: BoardStageProps) {
       // than silently dropping the selection, so they can just click the
       // correct slot next.
       return;
+    }
+    if (occupant && occupant !== selectedPlayerId) {
+      // The target slot already has someone else in it — if the selected
+      // player has a slot of their own, trade places rather than bumping
+      // the occupant back to the team column (matching drag-and-drop's
+      // existing swap behavior in handleDrop below).
+      const fromSlotId = slotIdByPlayer.get(selectedPlayerId);
+      if (fromSlotId) {
+        live.swapPlacements(fromSlotId, slot.id);
+        setSelectedPlayerId(null);
+        return;
+      }
     }
     place(slot.id, selectedPlayerId);
     setSelectedPlayerId(null);
@@ -195,7 +211,7 @@ export function BoardStage({ onStartNewMatch }: BoardStageProps) {
       strengthB,
     };
     dispatch({ type: 'SAVE_MATCH_TO_HISTORY', entry });
-    setNotice('Match saved to history.');
+    onNavigateToHistory();
   }
 
   function handleStartNewMatch() {
@@ -289,19 +305,6 @@ export function BoardStage({ onStartNewMatch }: BoardStageProps) {
       </div>
       {!isClient && (
         <div className="sp-stage__actions">
-          {notice && (
-            <span className="sp-header-notice">
-              {notice}
-              <button
-                type="button"
-                className="sp-header-notice__close"
-                onClick={() => setNotice(null)}
-                aria-label="Dismiss"
-              >
-                ×
-              </button>
-            </span>
-          )}
           <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
             Auto-fill positions
           </button>

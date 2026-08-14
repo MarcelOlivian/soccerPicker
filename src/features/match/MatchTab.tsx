@@ -16,7 +16,11 @@ const STAGES: { id: Stage; label: string }[] = [
   { id: 'board', label: 'Field' },
 ];
 
-export function MatchTab() {
+interface MatchTabProps {
+  onNavigateToHistory: () => void;
+}
+
+export function MatchTab({ onNavigateToHistory }: MatchTabProps) {
   const [stage, setStage] = useState<Stage>('attendance');
   const { role, synced } = useLive();
   const { state } = useAppState();
@@ -62,7 +66,9 @@ export function MatchTab() {
           <AttendanceStage onContinue={() => setStage('draft')} />
         ))}
       {stage === 'draft' && <DraftStage onContinue={() => setStage('board')} />}
-      {stage === 'board' && <BoardStage onStartNewMatch={() => setStage('attendance')} />}
+      {stage === 'board' && (
+        <BoardStage onStartNewMatch={() => setStage('attendance')} onNavigateToHistory={onNavigateToHistory} />
+      )}
     </div>
   );
 }

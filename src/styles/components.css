@@ -164,6 +164,7 @@
   transform: translateX(-50%);
   z-index: 30;
   width: 200px;
+  max-width: min(200px, calc(100vw - 24px));
   background: var(--sp-panel-raised);
   border: var(--sp-border);
   padding: var(--sp-space-3);
@@ -598,6 +599,7 @@
 .sp-stage__actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--sp-space-2);
 }
 
@@ -706,6 +708,14 @@
   border-bottom: var(--sp-border-faint);
 }
 
+/* Shared by DraftTeamColumn's rows and HistoryTab's roster rows. */
+.sp-roster-row__meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  flex-shrink: 0;
+}
+
 .sp-draft-deck h4,
 .sp-draft-column h4 {
   font-size: 11px;
@@ -747,13 +757,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-space-4);
-}
-
-.sp-history-entry__player-meta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-space-2);
-  flex-shrink: 0;
 }
 
 .sp-player-grid--compact {
@@ -938,6 +941,17 @@
   transform: translate(-50%, -50%);
   width: var(--sp-slot-w);
   cursor: pointer;
+}
+
+/*
+ * `transform` above gives every .sp-slot its own stacking context, so a
+ * z-index set on the detail popup (a descendant) can never win against a
+ * *sibling* slot — only against other content inside its own slot. Promote
+ * the whole slot (popup included) above its siblings whenever its card's
+ * popup is open.
+ */
+.sp-slot:has(.sp-card__detail) {
+  z-index: 50;
 }
 
 .sp-slot__card {
