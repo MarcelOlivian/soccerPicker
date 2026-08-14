@@ -139,3 +139,28 @@ describe('reducer: DELETE_PLAYER cleans up match state', () => {
     expect(state.match.placements['A-DEF-0']).toBeUndefined();
   });
 });
+
+describe('reducer: MERGE_PLAYERS prunes match state to the surviving roster', () => {
+  it('replace mode drops stale attendance/picks for players not in the new roster', () => {
+    const state = stateWithDraftedTeams();
+    expect(state.match.attendingIds).toEqual(['a1', 'a2', 'b1', 'b2']);
+    const next = reduce(state, {
+      type: 'MERGE_PLAYERS',
+      mode: 'replace',
+      players: [makePlayer('a1'), makePlayer('a2')],
+    });
+    expect(next.match.attendingIds).toEqual(['a1', 'a2']);
+    expect(next.match.draft.picks.every((p) => p.playerId === 'a1' || p.playerId === 'a2')).toBe(true);
+    expect(next.match.draft.captainB).toBeUndefined(); // b1 was captainB
+  });
+
+  it('merge mode prunes when an incoming player reuses a name but not the old id', () => {
+    const state = stateWithDraftedTeams();
+    // "a1" the name stays, but the imported record carries a fresh id —
+    // the old id becomes orphaned in match state exactly like a replace.
+    const reimportedA1 = { ...makePlayer('a1-new-id'), name: 'a1' };
+    const next = reduce(state, { type: 'MERGE_PLAYERS', mode: 'merge', players: [reimportedA1] });
+    expect(next.match.attendingIds).not.toContain('a1');
+    expect(next.match.draft.captainA).toBeUndefined();
+  });
+});

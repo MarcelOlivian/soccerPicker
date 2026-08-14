@@ -702,16 +702,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--sp-space-2);
+  flex-wrap: wrap;
+  gap: var(--sp-space-1) var(--sp-space-2);
   font-size: 12px;
   padding: var(--sp-space-1) 0;
   border-bottom: var(--sp-border-faint);
+}
+
+/*
+ * A long name/nickname (or long enough that the row wraps) must never
+ * force the row itself wider than its column — this is a plain flex item
+ * with no explicit basis, so without min-width: 0 a name with an
+ * unbroken run of characters could refuse to shrink below its own
+ * content width and push the row past the 200px-wide Draft column border.
+ */
+.sp-roster-row__name {
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
 /* Shared by DraftTeamColumn's rows and HistoryTab's roster rows. */
 .sp-roster-row__meta {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--sp-space-2);
   flex-shrink: 0;
 }

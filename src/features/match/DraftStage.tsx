@@ -258,7 +258,7 @@ function DraftTeamColumn({ team, players, captainId }: { team: Team; players: Pl
       <div className="sp-draft-column__list">
         {players.map((p) => (
           <div key={p.id} className="sp-draft-column__row">
-            <span>
+            <span className="sp-roster-row__name">
               {p.name}
               {p.nickname && <span className="sp-card__nickname"> ({p.nickname})</span>}
             </span>

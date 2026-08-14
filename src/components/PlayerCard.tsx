@@ -88,6 +88,19 @@ export function PlayerCard({
     setShowDetail(false);
   }
 
+  function handleClick() {
+    // A click is a deliberate action, not an idle hover — cancel any
+    // pending/shown detail popup so it can't surprise-appear afterward.
+    // This card's instance can survive the click unmounted (e.g. a pitch
+    // slot swap re-uses the same component for a different player, since
+    // React keys slots by position, not by occupant), so a timer started
+    // before the click would otherwise still fire for whoever ends up here.
+    if (detailTimer.current) clearTimeout(detailTimer.current);
+    detailTimer.current = null;
+    setShowDetail(false);
+    onClick?.();
+  }
+
   function handleTouchStart(e: React.TouchEvent) {
     // Don't hijack a long press meant for the Edit/Dup/Del buttons.
     if ((e.target as HTMLElement).closest('.sp-card__actions')) return;
@@ -142,7 +155,7 @@ export function PlayerCard({
     <article
       className={classes.join(' ')}
       data-team={team ?? 'none'}
-      onClick={onClick}
+      onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
