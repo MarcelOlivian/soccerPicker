@@ -53,6 +53,14 @@ interface PlayerCardProps {
   onDragStart?: (e: React.DragEvent) => void;
   compact?: boolean;
   actions?: ReactNode;
+  /**
+   * Hides the overall rating, the stat bars, and disables the hover/
+   * long-press detail popup (which would otherwise leak those same stats).
+   * Used for the stats-voting subject card, so a voter is never anchored
+   * by the very numbers they're about to secretly vote on. The position
+   * badge stays — voters are told the position, just not the rating.
+   */
+  hideRatings?: boolean;
 }
 
 export function PlayerCard({
@@ -67,6 +75,7 @@ export function PlayerCard({
   onDragStart,
   compact,
   actions,
+  hideRatings,
 }: PlayerCardProps) {
   const photoUrl = usePlayerPhotoUrl(player);
   const position = atPosition ?? player.position;
@@ -87,6 +96,7 @@ export function PlayerCard({
   const longPressFired = useRef(false);
 
   function handleMouseEnter() {
+    if (hideRatings) return;
     detailTimer.current = setTimeout(() => setShowDetail(true), DETAIL_HOVER_DELAY_MS);
   }
 
@@ -110,6 +120,7 @@ export function PlayerCard({
   }
 
   function handleTouchStart(e: React.TouchEvent) {
+    if (hideRatings) return;
     // Don't hijack a long press meant for the Edit/Dup/Del buttons.
     if ((e.target as HTMLElement).closest('.sp-card__actions')) return;
     const touch = e.touches[0];
@@ -177,15 +188,17 @@ export function PlayerCard({
     >
       <div className="sp-card__bar" />
       <div className="sp-card__head">
-        <span className="sp-card__overall">
-          {rating}
-          {delta !== 0 && (
-            <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
-              {delta > 0 ? '+' : ''}
-              {delta}
-            </span>
-          )}
-        </span>
+        {!hideRatings && (
+          <span className="sp-card__overall">
+            {rating}
+            {delta !== 0 && (
+              <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
+                {delta > 0 ? '+' : ''}
+                {delta}
+              </span>
+            )}
+          </span>
+        )}
         <span className="sp-badge">{position}</span>
       </div>
       <div className="sp-card__photo">
@@ -195,7 +208,7 @@ export function PlayerCard({
         {player.name}
         {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
       </div>
-      {!compact && (
+      {!compact && !hideRatings && (
         <div className="sp-card__stats">
           {STAT_KEYS.map((key) => (
             <StatBlocks key={key} statKey={key} value={player.stats[key]} />
@@ -207,7 +220,7 @@ export function PlayerCard({
           {actions}
         </div>
       )}
-      {showDetail && (
+      {showDetail && !hideRatings && (
         <div className="sp-card__detail" role="tooltip">
           <div className="sp-card__detail-photo">
             {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}

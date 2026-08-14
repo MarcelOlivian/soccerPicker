@@ -494,6 +494,13 @@
   margin-bottom: var(--sp-space-4);
 }
 
+.sp-live-panel__solo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-space-1);
+}
+
 .sp-live-panel__head {
   display: flex;
   align-items: center;
@@ -501,7 +508,9 @@
   margin-bottom: var(--sp-space-3);
 }
 
-.sp-live-panel__body {
+/* ---------- session share (session code / copy link / QR) — shared by the live-draft and stats-voting host panels ---------- */
+
+.sp-session-share {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -509,14 +518,14 @@
   flex-wrap: wrap;
 }
 
-.sp-live-panel__info {
+.sp-session-share__info {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--sp-space-2);
 }
 
-.sp-live-panel__code {
+.sp-session-share__code {
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -525,10 +534,109 @@
   background: var(--sp-bg);
 }
 
-.sp-live-panel__qr {
+.sp-session-share__qr {
   border: var(--sp-border);
   background: #fff;
   padding: 4px;
+}
+
+/* ---------- stats voting ---------- */
+
+.sp-vote-host-panel {
+  margin-bottom: var(--sp-space-4);
+}
+
+.sp-vote-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-4);
+}
+
+.sp-vote-panel__subject {
+  max-width: 220px;
+}
+
+.sp-vote-panel__status h4,
+.sp-vote-panel__ballot h4,
+.sp-vote-panel__results h4 {
+  font-size: 11px;
+  color: var(--sp-muted);
+  margin-bottom: var(--sp-space-2);
+}
+
+.sp-vote-panel__voters {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+}
+
+.sp-vote-panel__voter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-2);
+  font-size: 12px;
+  padding: var(--sp-space-1) var(--sp-space-2);
+  border-bottom: var(--sp-border-faint);
+}
+
+/* Same "this is done/ready" tint used elsewhere (e.g. .sp-btn--ready). */
+.sp-vote-panel__voted {
+  background: rgba(47, 107, 58, 0.15);
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
+.sp-vote-panel__ballot-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-3);
+  margin-bottom: var(--sp-space-2);
+}
+
+.sp-vote-panel__steppers {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--sp-space-2) var(--sp-space-3);
+  margin-bottom: var(--sp-space-3);
+}
+
+.sp-vote-panel__table-wrap {
+  overflow-x: auto;
+}
+
+.sp-vote-panel__table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+
+.sp-vote-panel__table th,
+.sp-vote-panel__table td {
+  border-bottom: var(--sp-border-faint);
+  padding: var(--sp-space-1) var(--sp-space-2);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sp-vote-panel__table th {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--sp-muted);
+  text-transform: uppercase;
+}
+
+.sp-vote-panel__table-average td {
+  font-weight: 700;
+  border-top: var(--sp-border);
+}
+
+@media (max-width: 700px) {
+  .sp-vote-panel__steppers {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ---------- header controls (export / import / share link) ---------- */

@@ -3,7 +3,8 @@ import type { DataConnection, PeerError } from 'peerjs';
 import type { SyncMessage } from './protocol';
 import type { ConnectionStatus, SyncTransport } from './transport';
 
-const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
+// Shared with peerHub.ts (the voting session's multi-connection host transport).
+export const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 16000];
 
 /** Overrides for PeerJS's broker connection. Omit to use the default public cloud broker. */
 export interface PeerJsServerConfig {
