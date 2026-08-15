@@ -4,21 +4,48 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/');
 });
 
-test('Setup card flip icon toggles between the normal face and a radar view', async ({ page }) => {
+test('Setup card flip icon toggles the photo slot between the normal photo and a radar view', async ({ page }) => {
   await page.getByRole('button', { name: /Load 14 demo players/i }).click();
 
   const firstCard = page.locator('.sp-player-grid .sp-card').first();
   await expect(firstCard.locator('.sp-card__flip')).toBeVisible();
-  await expect(firstCard.locator('.sp-card__radar-view')).toHaveCount(0);
+  await expect(firstCard.locator('.sp-card__photo .sp-radar-chart')).toHaveCount(0);
 
   await firstCard.locator('.sp-card__flip').click();
-  await expect(firstCard.locator('.sp-card__radar-view')).toBeVisible();
-  await expect(firstCard.locator('.sp-radar-chart')).toBeVisible();
-  await expect(firstCard.locator('.sp-card__photo')).toHaveCount(0);
+  await expect(firstCard.locator('.sp-card__photo .sp-radar-chart')).toBeVisible();
+  await expect(firstCard.locator('.sp-card__photo img, .sp-card__photo .sp-monogram')).toHaveCount(0);
+  // The head (with the flip icon and position badge) and name stay put across the flip.
+  await expect(firstCard.locator('.sp-card__head')).toBeVisible();
+  await expect(firstCard.locator('.sp-card__name')).toBeVisible();
 
   await firstCard.locator('.sp-card__flip').click();
-  await expect(firstCard.locator('.sp-card__radar-view')).toHaveCount(0);
-  await expect(firstCard.locator('.sp-card__photo')).toBeVisible();
+  await expect(firstCard.locator('.sp-card__photo .sp-radar-chart')).toHaveCount(0);
+  await expect(firstCard.locator('.sp-card__photo img, .sp-card__photo .sp-monogram')).toHaveCount(1);
+});
+
+test("flipping one card doesn't move its Edit/Dup/Del row relative to a row-mate", async ({ page }) => {
+  await page.getByRole('button', { name: /Load 14 demo players/i }).click();
+
+  const cards = page.locator('.sp-player-grid .sp-card');
+  const first = cards.nth(0);
+  const second = cards.nth(1);
+
+  const beforeFirst = await first.locator('.sp-card__actions').boundingBox();
+  const beforeSecond = await second.locator('.sp-card__actions').boundingBox();
+  expect(beforeFirst).not.toBeNull();
+  expect(beforeSecond).not.toBeNull();
+  // Sanity check: both start at the same row.
+  expect(Math.abs(beforeFirst!.y - beforeSecond!.y)).toBeLessThan(1);
+
+  await first.locator('.sp-card__flip').click();
+  await expect(first.locator('.sp-card__photo .sp-radar-chart')).toBeVisible();
+
+  const afterFirst = await first.locator('.sp-card__actions').boundingBox();
+  const afterSecond = await second.locator('.sp-card__actions').boundingBox();
+  expect(afterFirst).not.toBeNull();
+  expect(afterSecond).not.toBeNull();
+  expect(Math.abs(afterFirst!.y - afterSecond!.y)).toBeLessThan(1);
+  expect(Math.abs(afterFirst!.y - beforeFirst!.y)).toBeLessThan(1);
 });
 
 test('Draft-stage deck cards also get the radar flip icon, Field/History cards do not', async ({ page }) => {

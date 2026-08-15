@@ -30,8 +30,7 @@
 .sp-card__head,
 .sp-card__photo,
 .sp-card__name,
-.sp-card__stats,
-.sp-card__radar-view {
+.sp-card__stats {
   pointer-events: none;
 }
 
@@ -72,18 +71,13 @@
   background: var(--sp-verified-tint);
 }
 
-/* Makes room in .sp-card__head for the top-left flip icon so it doesn't overlap .sp-card__overall's number. */
-.sp-card--flippable .sp-card__head {
-  padding-left: 26px;
-}
-
 .sp-card__flip {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  z-index: 5;
-  width: 20px;
-  height: 20px;
+  /* Sits inside .sp-card__head, which is in the click/drag-through
+     pointer-events:none list below — pointer-events is inherited, so this
+     opts the button itself back in. */
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
   padding: 0;
   display: flex;
   align-items: center;
@@ -95,35 +89,24 @@
 }
 
 .sp-card--compact .sp-card__flip {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .sp-card__flip svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .sp-card--compact .sp-card__flip svg {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 /* Ink-invert on active, matching the same idiom used elsewhere for a "toggled on" state. */
 .sp-card__flip--active {
   background: var(--sp-ink);
   color: var(--sp-bg);
-}
-
-.sp-card__radar-view {
-  padding: var(--sp-space-2);
-  text-align: center;
-}
-
-.sp-card__radar-overall {
-  font-size: 18px;
-  font-weight: 700;
-  margin: 0 0 var(--sp-space-1);
 }
 
 .sp-card__head {
@@ -373,6 +356,11 @@
   gap: 4px;
   padding: var(--sp-space-2);
   border-top: var(--sp-border-faint);
+  /* .sp-card is a flex column, so this pins the row to the card's bottom
+     edge — combined with .sp-player-grid's flex-wrap row-stretch, a
+     flipped (shorter-content) card among full-height row-mates keeps its
+     actions at the same Y position instead of riding up. */
+  margin-top: auto;
 }
 
 .sp-card__actions .sp-btn {
@@ -1308,6 +1296,14 @@
 }
 
 .sp-compare-panel {
+  background: var(--sp-panel);
+  border: var(--sp-border);
+  padding: var(--sp-space-4);
+}
+
+/* Same opaque-panel treatment as .sp-compare-panel above — without it the
+   dot-grid canvas shows straight through behind the chart on phone. */
+.sp-compare-radar-view {
   background: var(--sp-panel);
   border: var(--sp-border);
   padding: var(--sp-space-4);
