@@ -28,6 +28,10 @@
   --sp-danger: #9b2c2c;
   --sp-ok: #2f6b3a;
 
+  /* Compare tab: 3rd/4th simultaneous radar series (1st/2nd reuse --sp-team-a/--sp-team-b). Muted violet + gold — deliberately off the amber/teal/red/green hues already claimed elsewhere. */
+  --sp-compare-3: #5c4a8f;
+  --sp-compare-4: #a5811a;
+
   /* Captain card highlight on the Field stage — same rgba-tint pattern as the banners below. */
   --sp-team-a-tint: rgba(180, 83, 9, 0.12);
   --sp-team-b-tint: rgba(15, 92, 99, 0.12);

@@ -1,9 +1,8 @@
 import { useMemo, useState } from 'react';
 import { PlayerCard } from '../../components/PlayerCard';
-import { preferredOverall } from '../../lib/rating';
+import { filterAndSortPlayers } from '../../lib/playerSearch';
+import type { PlayerSortKey } from '../../lib/playerSearch';
 import type { Player } from '../../types';
-
-type SortKey = 'name' | 'overall' | 'position';
 
 interface PlayerGridProps {
   players: Player[];
@@ -14,21 +13,9 @@ interface PlayerGridProps {
 
 export function PlayerGrid({ players, onEdit, onDuplicate, onDelete }: PlayerGridProps) {
   const [query, setQuery] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortKey, setSortKey] = useState<PlayerSortKey>('name');
 
-  const visible = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? players.filter(
-          (p) => p.name.toLowerCase().includes(q) || (p.nickname ?? '').toLowerCase().includes(q),
-        )
-      : players;
-    return [...filtered].sort((a, b) => {
-      if (sortKey === 'position') return a.position.localeCompare(b.position) || a.name.localeCompare(b.name);
-      if (sortKey === 'overall') return preferredOverall(b) - preferredOverall(a);
-      return a.name.localeCompare(b.name);
-    });
-  }, [players, query, sortKey]);
+  const visible = useMemo(() => filterAndSortPlayers(players, query, sortKey), [players, query, sortKey]);
 
   return (
     <div>
@@ -40,7 +27,7 @@ export function PlayerGrid({ players, onEdit, onDuplicate, onDelete }: PlayerGri
           onChange={(e) => setQuery(e.target.value)}
           aria-label="Search players"
         />
-        <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} aria-label="Sort players">
+        <select value={sortKey} onChange={(e) => setSortKey(e.target.value as PlayerSortKey)} aria-label="Sort players">
           <option value="name">Sort: Name</option>
           <option value="overall">Sort: Overall</option>
           <option value="position">Sort: Position</option>
@@ -51,6 +38,7 @@ export function PlayerGrid({ players, onEdit, onDuplicate, onDelete }: PlayerGri
           <PlayerCard
             key={player.id}
             player={player}
+            allowRadarFlip
             actions={
               <>
                 <button type="button" className="sp-btn sp-btn--sm" onClick={() => onEdit(player)}>
