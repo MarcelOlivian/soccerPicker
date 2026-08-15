@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { PhotoInput } from '../../components/PhotoInput';
 import { StatStepper } from '../../components/StatStepper';
+import { formatStatsVerifiedAt } from '../../lib/statsVerified';
 import { useVoting } from '../../state/VotingContext';
 import type { Player, PlayerStats, Position, StatKey, StatValue } from '../../types';
 import { POSITIONS, STAT_KEYS, emptyStats } from '../../types';
@@ -25,12 +26,14 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [position, setPosition] = useState<Position>(initial?.position ?? 'MID');
   const [stats, setStats] = useState<PlayerStats>(initial?.stats ?? emptyStats());
-  const [statsVerified, setStatsVerified] = useState(initial?.statsVerified ?? false);
+  const [statsVerifiedBy, setStatsVerifiedBy] = useState<string[] | undefined>(initial?.statsVerifiedBy);
+  const [statsVerifiedAt, setStatsVerifiedAt] = useState<number | undefined>(initial?.statsVerifiedAt);
   const [taunt, setTaunt] = useState(initial?.taunt ?? '');
   const [photo, setPhoto] = useState<{ photoUrl?: string; photoKey?: string }>({
     photoUrl: initial?.photoUrl,
     photoKey: initial?.photoKey,
   });
+  const [hostDisplayName, setHostDisplayName] = useState('');
   const voting = useVoting();
 
   const canSave = name.trim().length > 0;
@@ -39,15 +42,17 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
   function updateStat(key: StatKey, value: StatValue) {
     setStats((prev) => ({ ...prev, [key]: value }));
     // A hand edit means the saved stats no longer exactly match what the
-    // group voted for, so the "verified" stamp no longer applies — even a
+    // group voted for, so the "verified" record no longer applies — even a
     // single-stat tweak right after a reveal clears it. Re-voting is the
     // only way to get it back.
-    setStatsVerified(false);
+    setStatsVerifiedBy(undefined);
+    setStatsVerifiedAt(undefined);
   }
 
-  function handleApplyVoteStats(newStats: PlayerStats) {
+  function handleApplyVoteStats(newStats: PlayerStats, votedBy: string[]) {
     setStats(newStats);
-    setStatsVerified(true);
+    setStatsVerifiedBy(votedBy);
+    setStatsVerifiedAt(Date.now());
   }
 
   function handleSubmit(e: FormEvent) {
@@ -62,21 +67,25 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       photoUrl: photo.photoUrl,
       photoKey: photo.photoKey,
       taunt: taunt.trim() || undefined,
-      statsVerified: statsVerified || undefined,
+      statsVerifiedBy,
+      statsVerifiedAt,
       createdAt: initial?.createdAt ?? Date.now(),
     };
     onSave(player);
   }
 
   function handleStartVote() {
-    voting.startVote({
-      playerId,
-      name: name.trim(),
-      nickname: nickname.trim() || undefined,
-      position,
-      photoUrl: photo.photoUrl,
-      photoKey: photo.photoKey,
-    });
+    voting.startVote(
+      {
+        playerId,
+        name: name.trim(),
+        nickname: nickname.trim() || undefined,
+        position,
+        photoUrl: photo.photoUrl,
+        photoKey: photo.photoKey,
+      },
+      hostDisplayName.trim() || undefined,
+    );
   }
 
   if (votingForThisPlayer) {
@@ -131,11 +140,26 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
             </select>
           </div>
           <PhotoInput value={photo} onChange={setPhoto} />
+          <div className="sp-field">
+            <label htmlFor="p-host-name">Your name (shown to voters, optional)</label>
+            <input
+              id="p-host-name"
+              type="text"
+              value={hostDisplayName}
+              onChange={(e) => setHostDisplayName(e.target.value)}
+              placeholder="Used if you start a stats vote"
+            />
+          </div>
         </div>
         <div className="sp-player-form__stats">
           {STAT_KEYS.map((key) => (
             <StatStepper key={key} statKey={key} value={stats[key]} onChange={(v) => updateStat(key, v)} />
           ))}
+          {statsVerifiedBy && statsVerifiedAt && (
+            <p className="sp-hint">
+              Stats voted by {statsVerifiedBy.join(', ')} on {formatStatsVerifiedAt(statsVerifiedAt)}.
+            </p>
+          )}
           <div className="sp-field sp-field--taunt">
             <label htmlFor="p-taunt">Signature line (optional)</label>
             <textarea

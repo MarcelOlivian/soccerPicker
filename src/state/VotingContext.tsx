@@ -12,6 +12,7 @@ import { PeerJsTransport } from '../sync/peerjsTransport';
 import type { ConnectionStatus } from '../sync/transport';
 import type { VotingHostSession } from '../sync/votingHostSession';
 import { createVotingHostSession, HOST_VOTER_ID } from '../sync/votingHostSession';
+import { MIN_VOTERS } from '../sync/votingProtocol';
 import type {
   RevealedBallot,
   VoteClientMessage,
@@ -282,10 +283,13 @@ export function VotingProvider({ children }: { children: ReactNode }) {
   );
 
   const reveal = useCallback(() => {
-    const ballots = hostSessionRef.current?.reveal();
+    if (!hostSessionRef.current) return;
+    const ballots = hostSessionRef.current.reveal();
     if (ballots) {
       setPhase('revealed');
       setRevealedBallots(ballots);
+    } else {
+      setErrorMessage(`Need at least ${MIN_VOTERS} votes to reveal.`);
     }
   }, []);
 

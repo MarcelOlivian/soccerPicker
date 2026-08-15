@@ -1,11 +1,12 @@
 import { SessionShare } from '../../components/SessionShare';
 import { useVoting } from '../../state/VotingContext';
+import { MIN_VOTERS } from '../../sync/votingProtocol';
 import type { PlayerStats } from '../../types';
 import { VotingPanel } from './VotingPanel';
 
 interface VoteHostPanelProps {
-  /** Called with the rounded-average stats once the host chooses to bring them into the player form. */
-  onApplyStats: (stats: PlayerStats) => void;
+  /** Called with the rounded-average stats and the display names of everyone who cast a ballot, once the host chooses to bring the result into the player form. */
+  onApplyStats: (stats: PlayerStats, votedBy: string[]) => void;
 }
 
 /** Host-side view of a stats-voting session: share the code, watch/cast ballots, reveal, and bring the result into the form. */
@@ -14,9 +15,12 @@ export function VoteHostPanel({ onApplyStats }: VoteHostPanelProps) {
 
   if (voting.role !== 'host') return null;
 
+  const votedCount = voting.voters.filter((v) => v.hasVoted).length;
   const pendingCount = voting.voters.filter((v) => !v.hasVoted).length;
+  const belowMinimum = votedCount < MIN_VOTERS;
 
   function handleReveal() {
+    if (belowMinimum) return;
     if (pendingCount > 0) {
       const noun = pendingCount === 1 ? 'voter hasn\'t' : 'voters haven\'t';
       if (!confirm(`${pendingCount} ${noun} voted yet. Reveal anyway?`)) return;
@@ -25,7 +29,9 @@ export function VoteHostPanel({ onApplyStats }: VoteHostPanelProps) {
   }
 
   function handleUseStats() {
-    if (voting.tally) onApplyStats(voting.tally);
+    if (voting.tally && voting.revealedBallots) {
+      onApplyStats(voting.tally, voting.revealedBallots.map((b) => b.displayName));
+    }
     voting.endVote();
   }
 
@@ -51,8 +57,10 @@ export function VoteHostPanel({ onApplyStats }: VoteHostPanelProps) {
 
       {voting.phase === 'collecting' && (
         <div className="sp-stage__actions">
-          <button type="button" className="sp-btn sp-btn--primary" onClick={handleReveal}>
-            Reveal votes{pendingCount > 0 ? ` (${pendingCount} pending)` : ''}
+          <button type="button" className="sp-btn sp-btn--primary" disabled={belowMinimum} onClick={handleReveal}>
+            {belowMinimum
+              ? `Reveal votes (need ${MIN_VOTERS - votedCount} more vote${MIN_VOTERS - votedCount === 1 ? '' : 's'})`
+              : `Reveal votes${pendingCount > 0 ? ` (${pendingCount} pending)` : ''}`}
           </button>
         </div>
       )}

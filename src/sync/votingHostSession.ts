@@ -1,5 +1,6 @@
 import type { PeerHub } from './peerHub';
 import type { PlayerStats } from '../types';
+import { MIN_VOTERS } from './votingProtocol';
 import type { RevealedBallot, VotePhase, VoteSubject, VoterSummary } from './votingProtocol';
 
 /**
@@ -23,8 +24,12 @@ export interface VotingHostSession {
   getVoters: () => VoterSummary[];
   /** The host's own secret ballot — recorded locally, never sent over the hub. */
   castHostVote: (stats: PlayerStats) => void;
-  /** Reveals every cast ballot to everyone, host included. Safe to call before all voters have voted. */
-  reveal: () => RevealedBallot[];
+  /**
+   * Reveals every cast ballot to everyone, host included. Safe to call
+   * before all voters have voted. Returns null (and reveals nothing) below
+   * MIN_VOTERS cast ballots — one person casting a ballot alone isn't a vote.
+   */
+  reveal: () => RevealedBallot[] | null;
   /** Starts a fresh round for the same subject: clears ballots, keeps the voter roster, notifies everyone. */
   reset: () => void;
   dispose: () => void;
@@ -107,7 +112,8 @@ export function createVotingHostSession(deps: VotingHostSessionDeps): VotingHost
     broadcastRoster();
   }
 
-  function reveal(): RevealedBallot[] {
+  function reveal(): RevealedBallot[] | null {
+    if (ballots.size < MIN_VOTERS) return null;
     phase = 'revealed';
     const revealed: RevealedBallot[] = Array.from(ballots.entries()).map(([id, stats]) => ({
       voterId: id,

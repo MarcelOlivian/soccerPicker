@@ -194,7 +194,16 @@ test('full stats-vote flow: start, join, secret ballots, reveal, adjust, save', 
   await context.close();
 });
 
-test('an untouched vote reveal marks the saved player as verified', async ({ browser }) => {
+async function castBallotAs(page: import('@playwright/test').Page, level: number) {
+  for (const label of ['PAC', 'SHO', 'PAS', 'DRI', 'DEF', 'PHY']) {
+    await page.getByRole('radio', { name: `${label} ${level} of 5` }).click();
+  }
+  await page.getByRole('button', { name: /Submit my secret vote/i }).click();
+}
+
+test('reveal is blocked below 2 cast ballots, and an untouched reveal marks the saved player as verified', async ({
+  browser,
+}) => {
   test.setTimeout(60_000);
   const context = await browser.newContext();
   const host = await context.newPage();
@@ -204,43 +213,45 @@ test('an untouched vote reveal marks the saved player as verified', async ({ bro
   await host.getByRole('button', { name: '+ New player' }).click();
   await host.fill('#p-name', 'Verified Test');
   await host.selectOption('#p-pos', 'ATT');
+  await host.fill('#p-host-name', 'Marcel');
   await host.getByRole('button', { name: 'Start stats vote' }).click();
   const sessionCode = await host.locator('.sp-session-share__code').innerText();
 
+  // Host casts its own ballot alone -> only 1 person has voted so far, so
+  // "Reveal votes" must be disabled and unclickable.
+  await castBallotAs(host, 3);
+  const revealButton = host.getByRole('button', { name: /Reveal votes/i });
+  await expect(revealButton).toBeDisabled();
+  await expect(revealButton).toHaveText(/need 1 more vote/i);
+
   await voter.goto(APP_URL);
   await voter.getByRole('button', { name: 'Stats vote' }).click();
+  await voter.fill('#vote-name', 'Sam');
   await voter.fill('#vote-code', sessionCode);
   await voter.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(voter.locator('.sp-vote-panel__steppers')).toBeVisible({ timeout: 10_000 });
+  await castBallotAs(voter, 4);
 
-  for (const [label, level] of [
-    ['PAC', 4],
-    ['SHO', 4],
-    ['PAS', 4],
-    ['DRI', 4],
-    ['DEF', 4],
-    ['PHY', 4],
-  ] as [string, number][]) {
-    await voter.getByRole('radio', { name: `${label} ${level} of 5` }).click();
-  }
-  await voter.getByRole('button', { name: /Submit my secret vote/i }).click();
-
-  host.once('dialog', (dialog) => dialog.accept());
-  await host.getByRole('button', { name: /Reveal votes/i }).click();
+  // Now 2 people have voted -> reveal is enabled and succeeds without a
+  // pending-voters warning dialog (nobody is left pending).
+  await expect(revealButton).toBeEnabled();
+  await revealButton.click();
   await expect(host.locator('.sp-vote-panel__results')).toBeVisible({ timeout: 10_000 });
 
   // Save WITHOUT touching any stat -> the saved player should carry the
-  // verified stamp.
+  // verified record.
   await host.getByRole('button', { name: 'Use these stats' }).click();
+  await expect(host.locator('.sp-player-form__stats p.sp-hint')).toContainText(/Stats voted by Marcel.*Sam/);
   await host.getByRole('button', { name: 'Save player' }).click();
 
   const savedCard = host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Verified Test' });
   await expect(savedCard).toBeVisible();
   await expect(savedCard.locator('.sp-badge--verified')).toHaveCount(1);
 
-  // A subsequent manual edit clears the stamp.
+  // A subsequent manual edit clears the record.
   await savedCard.locator('.sp-card__actions button', { hasText: 'Edit' }).click();
   await host.getByRole('radio', { name: 'PAC 5 of 5' }).click();
+  await expect(host.locator('.sp-player-form__stats p.sp-hint')).toHaveCount(0);
   await host.getByRole('button', { name: 'Save player' }).click();
 
   const savedCardAfterEdit = host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Verified Test' });

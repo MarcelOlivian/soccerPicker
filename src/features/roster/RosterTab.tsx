@@ -27,7 +27,8 @@ export function RosterTab() {
       name: `${player.name} (copy)`,
       photoKey: undefined,
       // The copy hasn't itself been through a vote, even if the original had.
-      statsVerified: undefined,
+      statsVerifiedBy: undefined,
+      statsVerifiedAt: undefined,
       createdAt: Date.now(),
     };
     dispatch({ type: 'DUPLICATE_PLAYER', id: player.id, newPlayer });

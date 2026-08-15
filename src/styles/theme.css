@@ -31,6 +31,8 @@
   /* Captain card highlight on the Field stage — same rgba-tint pattern as the banners below. */
   --sp-team-a-tint: rgba(180, 83, 9, 0.12);
   --sp-team-b-tint: rgba(15, 92, 99, 0.12);
+  /* Very slight background tint on a card whose stats came straight from a vote — much lower opacity than the captain tint, and not team-scoped, since verified cards show up mostly in the roster grid. */
+  --sp-verified-tint: rgba(47, 107, 58, 0.06);
 
   /* Field stage pitch — muted, desaturated so it sits with the greige palette rather than fighting it. */
   --sp-pitch-green: #7e9163;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { getImageUrl } from '../lib/imageStore';
 import { overall, overallDelta } from '../lib/rating';
+import { formatStatsVerifiedAt, isStatsVerified } from '../lib/statsVerified';
 import { STAT_KEYS } from '../types';
 import type { Player, Position, Team } from '../types';
 import { Monogram } from './Monogram';
@@ -164,11 +165,18 @@ export function PlayerCard({
     [],
   );
 
+  const verified = isStatsVerified(player);
+  const verifiedTitle =
+    verified && player.statsVerifiedAt
+      ? `Stats voted by ${player.statsVerifiedBy!.join(', ')} on ${formatStatsVerifiedAt(player.statsVerifiedAt)}`
+      : 'Stats set by a stats vote';
+
   const classes = ['sp-card'];
   if (compact) classes.push('sp-card--compact');
   if (selected) classes.push('sp-card--selected');
   if (faded) classes.push('sp-card--faded');
   if (isCaptain) classes.push('sp-card--captain');
+  if (verified) classes.push('sp-card--verified');
 
   return (
     <article
@@ -200,8 +208,8 @@ export function PlayerCard({
           </span>
         )}
         <span className="sp-card__head-right">
-          {player.statsVerified && (
-            <span className="sp-badge sp-badge--verified" title="Stats set by a stats vote">
+          {verified && (
+            <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
               ✓
             </span>
           )}
@@ -238,8 +246,8 @@ export function PlayerCard({
           </div>
           <div className="sp-card__detail-meta">
             <span className="sp-badge">{position}</span>
-            {player.statsVerified && (
-              <span className="sp-badge sp-badge--verified" title="Stats set by a stats vote">
+            {verified && (
+              <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
                 ✓
               </span>
             )}
