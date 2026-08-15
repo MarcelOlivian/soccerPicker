@@ -47,8 +47,10 @@ export interface Player {
   photoKey?: string;
   /** A short signature line — a taunt, a quote, a thing they always say. */
   taunt?: string;
-  /** True when these exact stats were set by a stats-vote reveal and have not been hand-edited since. */
-  statsVerified?: boolean;
+  /** Display names of everyone who cast a ballot in the vote that produced these exact stats — absent/empty if never voted on, or if hand-edited since. */
+  statsVerifiedBy?: string[];
+  /** Timestamp (Date.now()) of that vote's reveal-and-apply. */
+  statsVerifiedAt?: number;
   createdAt: number;
 }
 

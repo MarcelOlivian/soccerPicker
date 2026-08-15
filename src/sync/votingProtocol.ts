@@ -11,6 +11,9 @@ import type { PlayerStats, Position } from '../types';
  * but now for N voters instead of one client — see peerHub.ts.
  */
 
+/** A "vote" of one person isn't a vote — reveal is blocked below this many cast ballots. */
+export const MIN_VOTERS = 2;
+
 /** What a voter is allowed to see about the player being rated — never the existing/in-progress stats. */
 export interface VoteSubject {
   playerId: string;

@@ -108,6 +108,7 @@ describe('votingHostSession', () => {
     await flush();
 
     const revealed = session.reveal();
+    if (!revealed) throw new Error('expected reveal() to succeed with 3 cast ballots');
     await flush();
 
     expect(revealed).toHaveLength(3);
@@ -123,14 +124,19 @@ describe('votingHostSession', () => {
   });
 
   it('a disconnecting voter drops out of the roster and out of a subsequent reveal', async () => {
-    const { hub, voters, disconnectVoter } = createFakeHub(2);
+    // 3 voters (not 2) so that after voter-1 disconnects, 2 cast ballots
+    // still remain (voter-0 + voter-2) — enough to satisfy MIN_VOTERS and
+    // actually exercise the reveal this test is checking.
+    const { hub, voters, disconnectVoter } = createFakeHub(3);
     const session = createVotingHostSession({ hub, getSubject: subject });
 
     voters[0].send({ type: 'VOTE_JOIN', displayName: 'Alex' });
     voters[1].send({ type: 'VOTE_JOIN', displayName: 'Ben' });
+    voters[2].send({ type: 'VOTE_JOIN', displayName: 'Cam' });
     await flush();
     voters[0].send({ type: 'VOTE_CAST', stats: stats({ pace: 5 }) });
     voters[1].send({ type: 'VOTE_CAST', stats: stats({ pace: 1 }) });
+    voters[2].send({ type: 'VOTE_CAST', stats: stats({ pace: 3 }) });
     await flush();
 
     expect(session.getVoters().map((v) => v.id)).toContain('voter-1');
@@ -142,8 +148,35 @@ describe('votingHostSession', () => {
     expect(remaining.some((v) => v.id === 'voter-1')).toBe(false);
 
     const revealed = session.reveal();
+    if (!revealed) throw new Error('expected reveal() to succeed with 2 remaining cast ballots');
     expect(revealed.some((b) => b.voterId === 'voter-1')).toBe(false);
     expect(revealed.some((b) => b.voterId === 'voter-0')).toBe(true);
+    session.dispose();
+  });
+
+  it('reveal() refuses and broadcasts nothing with fewer than MIN_VOTERS cast ballots', async () => {
+    const { hub, voters } = createFakeHub(1);
+    const session = createVotingHostSession({ hub, getSubject: subject });
+    const received: VoteHostMessage[] = [];
+    voters[0].onMessage((m) => received.push(m));
+
+    voters[0].send({ type: 'VOTE_JOIN', displayName: 'Alex' });
+    await flush();
+    session.castHostVote(stats({ pace: 5 })); // only 1 cast ballot: the host's
+    await flush();
+    received.length = 0;
+
+    const revealed = session.reveal();
+    await flush();
+
+    expect(revealed).toBeNull();
+    expect(received.some((m) => m.type === 'VOTE_REVEAL')).toBe(false);
+
+    // A second person votes -> now at MIN_VOTERS, reveal succeeds.
+    voters[0].send({ type: 'VOTE_CAST', stats: stats({ pace: 1 }) });
+    await flush();
+    const revealedAfterSecondVote = session.reveal();
+    expect(revealedAfterSecondVote).toHaveLength(2);
     session.dispose();
   });
 
