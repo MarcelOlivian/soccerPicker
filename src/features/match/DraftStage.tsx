@@ -66,9 +66,10 @@ export function DraftStage({ onContinue }: DraftStageProps) {
   const strengthB = teamStrength(teamBPlayers.map((player) => ({ player, position: player.position })));
   const balance = computeBalance(strengthA, strengthB);
 
-  // In live mode a client is always Team B; locally (solo or host) either
-  // side can be clicked, since one person is running the whole draft.
-  const myTurn = !isClient || turnTeam === 'B';
+  // In live mode a client can only click on team B's turn and a host only
+  // on team A's turn; solo mode has no live counterpart, so either side can
+  // always be clicked, since one person is running the whole draft.
+  const myTurn = live.role === 'solo' || (isClient ? turnTeam === 'B' : turnTeam === 'A');
 
   function pick(id: string) {
     live.applyPick(id);
@@ -193,8 +194,10 @@ export function DraftStage({ onContinue }: DraftStageProps) {
         <DraftTeamColumn team="A" players={teamAPlayers} captainId={match.draft.captainA} />
         <div className="sp-draft-deck">
           <h4>Available ({remainingIds.length})</h4>
-          {isClient && !myTurn && !complete && (
-            <div className="sp-banner sp-banner--info">WAITING FOR TEAM {teamAName.toUpperCase()}</div>
+          {!myTurn && !complete && (
+            <div className="sp-banner sp-banner--info">
+              WAITING FOR TEAM {(isClient ? teamAName : teamBName).toUpperCase()}
+            </div>
           )}
           <div className="sp-player-grid sp-player-grid--compact">
             {remainingIds.map((id) => {
