@@ -202,6 +202,31 @@ test('an out-of-turn pick from the client is silently rejected', async ({ browse
   await context.close();
 });
 
+test('the host is locked out on the client\'s turn, mirroring the client\'s own lockout', async ({ browser }) => {
+  test.setTimeout(60_000);
+  const context = await browser.newContext();
+  const host = await context.newPage();
+  const client = await context.newPage();
+
+  await attendAndStartDraft(host); // 2 captain auto-picks -> it's already team B's (the client's) turn
+  await host.getByRole('button', { name: 'Go live' }).click();
+  await expect(host.locator('.sp-connection-chip')).toHaveText('WAITING', { timeout: 15_000 });
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
+
+  await client.goto(APP_URL);
+  await client.getByRole('tab', { name: 'Match' }).click();
+  await client.fill('#join-code', sessionCode);
+  await client.getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
+
+  await host.getByRole('button', { name: /2\. DRAFT/i }).click();
+  // Captain B is Sofia Reyes (attendAndStartDraft picks attending[1] as captain B).
+  await expect(host.locator('.sp-banner--info')).toHaveText('WAITING FOR TEAM SOFIA');
+  await expect(host.locator('.sp-draft-deck .sp-card[role="button"]')).toHaveCount(0);
+
+  await context.close();
+});
+
 test('a client reload resyncs to the host\'s current state', async ({ browser }) => {
   test.setTimeout(60_000);
   const context = await browser.newContext();
@@ -219,11 +244,16 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   await client.getByRole('button', { name: 'Join', exact: true }).click();
   await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
 
-  // Host makes progress while the client isn't looking. The host's own
-  // deck is never turn-locked (only the client's is — see DraftStage.tsx's
-  // `myTurn` calc), and right after the 2 captain auto-picks it's team B's
-  // turn (snake order A B B A A B...), so this pick lands on Team B.
+  // Right after the 2 captain auto-picks it's team B's (the client's) turn
+  // (snake order A B B A A B...), so the client makes its own legitimate
+  // pick first — this both advances the turn to team A and is the only way
+  // to reach A's turn now that the host is correctly locked out of B's.
   await host.getByRole('button', { name: /2\. DRAFT/i }).click().catch(() => {});
+  await client.getByRole('button', { name: /2\. DRAFT/i }).click();
+  await client.locator('.sp-draft-deck .sp-card').first().click();
+
+  // Now it's the host's (team A's) turn. Host makes progress while the
+  // client isn't looking.
   const hostCard = host.locator('.sp-draft-deck .sp-card').first();
   const hostPickedName = await hostCard.locator('.sp-card__name').innerText();
   await hostCard.click();
@@ -238,9 +268,8 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
   });
 
   await client.getByRole('button', { name: /2\. DRAFT/i }).click();
-  // Same uppercase-vs-mixed-case mismatch as the other test; team is "B"
-  // per the comment above (the host's pick landed on team B's turn slot).
-  await expect(client.locator('.sp-draft-column[data-team="B"]')).toContainText(hostPickedName, {
+  // Case-insensitive: .sp-card__name renders uppercase via CSS.
+  await expect(client.locator('.sp-draft-column[data-team="A"]')).toContainText(hostPickedName, {
     ignoreCase: true,
   });
 
