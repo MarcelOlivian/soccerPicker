@@ -30,7 +30,8 @@
 .sp-card__head,
 .sp-card__photo,
 .sp-card__name,
-.sp-card__stats {
+.sp-card__stats,
+.sp-card__radar-view {
   pointer-events: none;
 }
 
@@ -71,6 +72,60 @@
   background: var(--sp-verified-tint);
 }
 
+/* Makes room in .sp-card__head for the top-left flip icon so it doesn't overlap .sp-card__overall's number. */
+.sp-card--flippable .sp-card__head {
+  padding-left: 26px;
+}
+
+.sp-card__flip {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 5;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--sp-panel-raised);
+  border: var(--sp-border-soft);
+  color: var(--sp-ink);
+  cursor: pointer;
+}
+
+.sp-card--compact .sp-card__flip {
+  width: 16px;
+  height: 16px;
+}
+
+.sp-card__flip svg {
+  width: 12px;
+  height: 12px;
+}
+
+.sp-card--compact .sp-card__flip svg {
+  width: 10px;
+  height: 10px;
+}
+
+/* Ink-invert on active, matching the same idiom used elsewhere for a "toggled on" state. */
+.sp-card__flip--active {
+  background: var(--sp-ink);
+  color: var(--sp-bg);
+}
+
+.sp-card__radar-view {
+  padding: var(--sp-space-2);
+  text-align: center;
+}
+
+.sp-card__radar-overall {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 var(--sp-space-1);
+}
+
 .sp-card__head {
   display: flex;
   align-items: center;
@@ -87,6 +142,11 @@
 .sp-badge--verified {
   border-color: var(--sp-ok);
   color: var(--sp-ok);
+}
+
+.sp-badge--compare-on {
+  border-color: var(--sp-accent);
+  color: var(--sp-accent);
 }
 
 .sp-card__overall {
@@ -1097,6 +1157,14 @@
   inset: 0;
 }
 
+/* ---------- radar chart ---------- */
+
+.sp-radar-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
 .sp-slot {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -1216,6 +1284,66 @@
     height: 24px;
     line-height: 22px;
   }
+}
+
+/* ---------- compare tab ---------- */
+
+.sp-compare-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  gap: var(--sp-space-5);
+  align-items: start;
+}
+
+@media (min-width: 1300px) {
+  .sp-compare-layout {
+    grid-template-columns: minmax(0, 1fr) 480px;
+  }
+}
+
+@media (max-width: 900px) {
+  .sp-compare-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sp-compare-panel {
+  background: var(--sp-panel);
+  border: var(--sp-border);
+  padding: var(--sp-space-4);
+}
+
+.sp-compare-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-space-2) var(--sp-space-3);
+  margin: var(--sp-space-3) 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+
+.sp-compare-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sp-compare-legend__swatch {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  border: 1px solid var(--sp-ink);
+}
+
+.sp-compare-radar-view__actions {
+  display: flex;
+  gap: var(--sp-space-2);
+  margin-top: var(--sp-space-4);
+}
+
+.sp-compare-radar-view__actions .sp-btn {
+  flex: 1;
 }
 
 /* ---------- phone layout ----------
@@ -1350,6 +1478,55 @@
 
   .sp-team-column .sp-card {
     width: 100%;
+  }
+
+  /* --- compare tab --- */
+  .sp-compare-pick {
+    padding-bottom: 76px; /* clears the fixed bottom bar below */
+  }
+
+  .sp-compare-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-space-2);
+    padding: var(--sp-space-2) var(--sp-space-3);
+    background: var(--sp-panel-raised);
+    border-top: var(--sp-border);
+  }
+
+  .sp-compare-bar__count {
+    font-size: 10px;
+    color: var(--sp-muted);
+    white-space: nowrap;
+  }
+
+  .sp-compare-bar__thumbs {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .sp-compare-bar__thumb {
+    width: 28px;
+    height: 28px;
+    border: var(--sp-border-soft);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sp-compare-bar__thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .sp-compare-bar__thumb .sp-monogram {
+    font-size: 12px;
   }
 
 }

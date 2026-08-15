@@ -209,6 +209,7 @@ export function DraftStage({ onContinue }: DraftStageProps) {
                   key={id}
                   player={player}
                   compact
+                  allowRadarFlip
                   faded={!clickable}
                   onClick={clickable ? () => pick(id) : undefined}
                 />

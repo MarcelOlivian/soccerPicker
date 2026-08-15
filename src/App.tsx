@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ConnectionChip } from './components/ConnectionChip';
 import { HeaderControls } from './components/HeaderControls';
 import { Tabs } from './components/Tabs';
+import { CompareTab } from './features/compare/CompareTab';
 import { HistoryTab } from './features/history/HistoryTab';
 import { MatchTab } from './features/match/MatchTab';
 import { RosterTab } from './features/roster/RosterTab';
@@ -10,12 +11,13 @@ import { AppProvider, useAppState } from './state/AppContext';
 import { LiveProvider } from './state/LiveContext';
 import { VotingProvider } from './state/VotingContext';
 
-type TabId = 'setup' | 'match' | 'history';
+type TabId = 'setup' | 'match' | 'history' | 'compare';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'setup', label: 'Setup' },
   { id: 'match', label: 'Match' },
   { id: 'history', label: 'History' },
+  { id: 'compare', label: 'Compare' },
 ];
 
 export default function App() {
@@ -72,6 +74,7 @@ function AppShell() {
         {activeTab === 'setup' && <RosterTab />}
         {activeTab === 'match' && <MatchTab onNavigateToHistory={() => setActiveTab('history')} />}
         {activeTab === 'history' && <HistoryTab />}
+        {activeTab === 'compare' && <CompareTab />}
       </main>
     </div>
   );

@@ -6,6 +6,7 @@ import { formatStatsVerifiedAt, isStatsVerified } from '../lib/statsVerified';
 import { STAT_KEYS } from '../types';
 import type { Player, Position, Team } from '../types';
 import { Monogram } from './Monogram';
+import { RadarChart } from './RadarChart';
 import { StatBlocks } from './StatBlocks';
 
 /** Resolves a player's photo to a displayable URL, whether it's an external link or an uploaded IndexedDB blob. */
@@ -62,6 +63,20 @@ interface PlayerCardProps {
    * badge stays — voters are told the position, just not the rating.
    */
   hideRatings?: boolean;
+  /**
+   * Renders a small flip icon; clicking it toggles the card between its
+   * normal face and a name+overall+radar-chart view. Only meaningful when
+   * !hideRatings. Used only by the Setup roster grid and the Draft-stage
+   * deck — nowhere else in the app passes this.
+   */
+  allowRadarFlip?: boolean;
+  /**
+   * Renders a compare-selection badge in .sp-card__head-right, reading
+   * "● Selected"/"○ Select" purely off the `selected` prop (no separate
+   * state, so it can never drift out of sync with the outline). Used only
+   * by the Compare tab's picker list.
+   */
+  compareBadge?: boolean;
 }
 
 export function PlayerCard({
@@ -77,6 +92,8 @@ export function PlayerCard({
   compact,
   actions,
   hideRatings,
+  allowRadarFlip,
+  compareBadge,
 }: PlayerCardProps) {
   const photoUrl = usePlayerPhotoUrl(player);
   const position = atPosition ?? player.position;
@@ -95,6 +112,13 @@ export function PlayerCard({
   const detailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const longPressFired = useRef(false);
+
+  const [showRadar, setShowRadar] = useState(false);
+
+  function handleFlipClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setShowRadar((v) => !v);
+  }
 
   function handleMouseEnter() {
     if (hideRatings) return;
@@ -122,8 +146,8 @@ export function PlayerCard({
 
   function handleTouchStart(e: React.TouchEvent) {
     if (hideRatings) return;
-    // Don't hijack a long press meant for the Edit/Dup/Del buttons.
-    if ((e.target as HTMLElement).closest('.sp-card__actions')) return;
+    // Don't hijack a long press meant for the Edit/Dup/Del buttons or the flip icon.
+    if ((e.target as HTMLElement).closest('.sp-card__actions, .sp-card__flip')) return;
     const touch = e.touches[0];
     touchStart.current = { x: touch.clientX, y: touch.clientY };
     longPressFired.current = false;
@@ -171,12 +195,15 @@ export function PlayerCard({
       ? `Stats voted by ${player.statsVerifiedBy!.join(', ')} on ${formatStatsVerifiedAt(player.statsVerifiedAt)}`
       : 'Stats set by a stats vote';
 
+  const canFlip = !!allowRadarFlip && !hideRatings;
+
   const classes = ['sp-card'];
   if (compact) classes.push('sp-card--compact');
   if (selected) classes.push('sp-card--selected');
   if (faded) classes.push('sp-card--faded');
   if (isCaptain) classes.push('sp-card--captain');
   if (verified) classes.push('sp-card--verified');
+  if (canFlip) classes.push('sp-card--flippable');
 
   return (
     <article
@@ -195,40 +222,75 @@ export function PlayerCard({
       tabIndex={onClick ? 0 : undefined}
     >
       <div className="sp-card__bar" />
-      <div className="sp-card__head">
-        {!hideRatings && (
-          <span className="sp-card__overall">
-            {rating}
-            {delta !== 0 && (
-              <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
-                {delta > 0 ? '+' : ''}
-                {delta}
+      {canFlip && (
+        <button
+          type="button"
+          className={`sp-card__flip ${showRadar ? 'sp-card__flip--active' : ''}`}
+          onClick={handleFlipClick}
+          aria-label={showRadar ? 'Show player card' : 'Show stats radar'}
+          title={showRadar ? 'Show player card' : 'Show stats radar'}
+        >
+          <svg viewBox="0 0 20 20" aria-hidden="true">
+            <polygon points="10,2 17,6 17,14 10,18 3,14 3,6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <circle cx="10" cy="10" r="1" fill="currentColor" />
+          </svg>
+        </button>
+      )}
+      {showRadar ? (
+        <div className="sp-card__radar-view">
+          <div className="sp-card__name" title={player.name}>
+            {player.name}
+            {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
+          </div>
+          <div className="sp-card__radar-overall">{rating}</div>
+          <RadarChart
+            series={[{ label: player.name, color: 'var(--sp-accent)', values: player.stats }]}
+            showAxisLabels={!compact}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="sp-card__head">
+            {!hideRatings && (
+              <span className="sp-card__overall">
+                {rating}
+                {delta !== 0 && (
+                  <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
+                    {delta > 0 ? '+' : ''}
+                    {delta}
+                  </span>
+                )}
               </span>
             )}
-          </span>
-        )}
-        <span className="sp-card__head-right">
-          {verified && (
-            <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
-              ✓
+            <span className="sp-card__head-right">
+              {verified && (
+                <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
+                  ✓
+                </span>
+              )}
+              {compareBadge && (
+                <span className={`sp-badge ${selected ? 'sp-badge--compare-on' : ''}`}>
+                  {selected ? '● Selected' : '○ Select'}
+                </span>
+              )}
+              <span className="sp-badge">{position}</span>
             </span>
+          </div>
+          <div className="sp-card__photo">
+            {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
+          </div>
+          <div className="sp-card__name" title={player.name}>
+            {player.name}
+            {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
+          </div>
+          {!compact && !hideRatings && (
+            <div className="sp-card__stats">
+              {STAT_KEYS.map((key) => (
+                <StatBlocks key={key} statKey={key} value={player.stats[key]} />
+              ))}
+            </div>
           )}
-          <span className="sp-badge">{position}</span>
-        </span>
-      </div>
-      <div className="sp-card__photo">
-        {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
-      </div>
-      <div className="sp-card__name" title={player.name}>
-        {player.name}
-        {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
-      </div>
-      {!compact && !hideRatings && (
-        <div className="sp-card__stats">
-          {STAT_KEYS.map((key) => (
-            <StatBlocks key={key} statKey={key} value={player.stats[key]} />
-          ))}
-        </div>
+        </>
       )}
       {actions && (
         <div className="sp-card__actions" onClick={(e) => e.stopPropagation()}>
