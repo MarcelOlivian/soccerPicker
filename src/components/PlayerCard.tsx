@@ -203,7 +203,6 @@ export function PlayerCard({
   if (faded) classes.push('sp-card--faded');
   if (isCaptain) classes.push('sp-card--captain');
   if (verified) classes.push('sp-card--verified');
-  if (canFlip) classes.push('sp-card--flippable');
 
   return (
     <article
@@ -222,75 +221,68 @@ export function PlayerCard({
       tabIndex={onClick ? 0 : undefined}
     >
       <div className="sp-card__bar" />
-      {canFlip && (
-        <button
-          type="button"
-          className={`sp-card__flip ${showRadar ? 'sp-card__flip--active' : ''}`}
-          onClick={handleFlipClick}
-          aria-label={showRadar ? 'Show player card' : 'Show stats radar'}
-          title={showRadar ? 'Show player card' : 'Show stats radar'}
-        >
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <polygon points="10,2 17,6 17,14 10,18 3,14 3,6" fill="none" stroke="currentColor" strokeWidth="1.4" />
-            <circle cx="10" cy="10" r="1" fill="currentColor" />
-          </svg>
-        </button>
-      )}
-      {showRadar ? (
-        <div className="sp-card__radar-view">
-          <div className="sp-card__name" title={player.name}>
-            {player.name}
-            {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
-          </div>
-          <div className="sp-card__radar-overall">{rating}</div>
+      <div className="sp-card__head">
+        {!hideRatings && (
+          <span className="sp-card__overall">
+            {rating}
+            {delta !== 0 && (
+              <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
+                {delta > 0 ? '+' : ''}
+                {delta}
+              </span>
+            )}
+          </span>
+        )}
+        <span className="sp-card__head-right">
+          {verified && (
+            <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
+              ✓
+            </span>
+          )}
+          {compareBadge && (
+            <span className={`sp-badge ${selected ? 'sp-badge--compare-on' : ''}`}>
+              {selected ? '● Selected' : '○ Select'}
+            </span>
+          )}
+          {canFlip && (
+            <button
+              type="button"
+              className={`sp-card__flip ${showRadar ? 'sp-card__flip--active' : ''}`}
+              onClick={handleFlipClick}
+              aria-label={showRadar ? 'Show player card' : 'Show stats radar'}
+              title={showRadar ? 'Show player card' : 'Show stats radar'}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <polygon points="10,2 17,6 17,14 10,18 3,14 3,6" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                <circle cx="10" cy="10" r="1" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+          <span className="sp-badge">{position}</span>
+        </span>
+      </div>
+      <div className="sp-card__photo">
+        {showRadar ? (
           <RadarChart
             series={[{ label: player.name, color: 'var(--sp-accent)', values: player.stats }]}
             showAxisLabels={!compact}
           />
+        ) : showPhoto ? (
+          <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} />
+        ) : (
+          <Monogram name={player.name} />
+        )}
+      </div>
+      <div className="sp-card__name" title={player.name}>
+        {player.name}
+        {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
+      </div>
+      {!compact && !hideRatings && !showRadar && (
+        <div className="sp-card__stats">
+          {STAT_KEYS.map((key) => (
+            <StatBlocks key={key} statKey={key} value={player.stats[key]} />
+          ))}
         </div>
-      ) : (
-        <>
-          <div className="sp-card__head">
-            {!hideRatings && (
-              <span className="sp-card__overall">
-                {rating}
-                {delta !== 0 && (
-                  <span className={`sp-card__delta ${delta < 0 ? 'sp-card__delta--down' : 'sp-card__delta--up'}`}>
-                    {delta > 0 ? '+' : ''}
-                    {delta}
-                  </span>
-                )}
-              </span>
-            )}
-            <span className="sp-card__head-right">
-              {verified && (
-                <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
-                  ✓
-                </span>
-              )}
-              {compareBadge && (
-                <span className={`sp-badge ${selected ? 'sp-badge--compare-on' : ''}`}>
-                  {selected ? '● Selected' : '○ Select'}
-                </span>
-              )}
-              <span className="sp-badge">{position}</span>
-            </span>
-          </div>
-          <div className="sp-card__photo">
-            {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
-          </div>
-          <div className="sp-card__name" title={player.name}>
-            {player.name}
-            {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
-          </div>
-          {!compact && !hideRatings && (
-            <div className="sp-card__stats">
-              {STAT_KEYS.map((key) => (
-                <StatBlocks key={key} statKey={key} value={player.stats[key]} />
-              ))}
-            </div>
-          )}
-        </>
       )}
       {actions && (
         <div className="sp-card__actions" onClick={(e) => e.stopPropagation()}>
