@@ -185,7 +185,66 @@ test('full stats-vote flow: start, join, secret ballots, reveal, adjust, save', 
   await host.getByRole('radio', { name: 'SHO 4 of 5' }).click();
   await host.getByRole('button', { name: 'Save player' }).click();
 
-  await expect(host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Marco Rossi' })).toBeVisible();
+  const savedCard = host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Marco Rossi' });
+  await expect(savedCard).toBeVisible();
+  // The host adjusted SHO after reveal, so the saved stats no longer exactly
+  // match the vote -- the "verified" stamp must not appear.
+  await expect(savedCard.locator('.sp-badge--verified')).toHaveCount(0);
+
+  await context.close();
+});
+
+test('an untouched vote reveal marks the saved player as verified', async ({ browser }) => {
+  test.setTimeout(60_000);
+  const context = await browser.newContext();
+  const host = await context.newPage();
+  const voter = await context.newPage();
+
+  await host.goto(APP_URL);
+  await host.getByRole('button', { name: '+ New player' }).click();
+  await host.fill('#p-name', 'Verified Test');
+  await host.selectOption('#p-pos', 'ATT');
+  await host.getByRole('button', { name: 'Start stats vote' }).click();
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
+
+  await voter.goto(APP_URL);
+  await voter.getByRole('button', { name: 'Stats vote' }).click();
+  await voter.fill('#vote-code', sessionCode);
+  await voter.getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(voter.locator('.sp-vote-panel__steppers')).toBeVisible({ timeout: 10_000 });
+
+  for (const [label, level] of [
+    ['PAC', 4],
+    ['SHO', 4],
+    ['PAS', 4],
+    ['DRI', 4],
+    ['DEF', 4],
+    ['PHY', 4],
+  ] as [string, number][]) {
+    await voter.getByRole('radio', { name: `${label} ${level} of 5` }).click();
+  }
+  await voter.getByRole('button', { name: /Submit my secret vote/i }).click();
+
+  host.once('dialog', (dialog) => dialog.accept());
+  await host.getByRole('button', { name: /Reveal votes/i }).click();
+  await expect(host.locator('.sp-vote-panel__results')).toBeVisible({ timeout: 10_000 });
+
+  // Save WITHOUT touching any stat -> the saved player should carry the
+  // verified stamp.
+  await host.getByRole('button', { name: 'Use these stats' }).click();
+  await host.getByRole('button', { name: 'Save player' }).click();
+
+  const savedCard = host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Verified Test' });
+  await expect(savedCard).toBeVisible();
+  await expect(savedCard.locator('.sp-badge--verified')).toHaveCount(1);
+
+  // A subsequent manual edit clears the stamp.
+  await savedCard.locator('.sp-card__actions button', { hasText: 'Edit' }).click();
+  await host.getByRole('radio', { name: 'PAC 5 of 5' }).click();
+  await host.getByRole('button', { name: 'Save player' }).click();
+
+  const savedCardAfterEdit = host.locator('.sp-player-grid .sp-card').filter({ hasText: 'Verified Test' });
+  await expect(savedCardAfterEdit.locator('.sp-badge--verified')).toHaveCount(0);
 
   await context.close();
 });

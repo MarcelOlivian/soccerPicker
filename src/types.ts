@@ -47,6 +47,8 @@ export interface Player {
   photoKey?: string;
   /** A short signature line — a taunt, a quote, a thing they always say. */
   taunt?: string;
+  /** True when these exact stats were set by a stats-vote reveal and have not been hand-edited since. */
+  statsVerified?: boolean;
   createdAt: number;
 }
 

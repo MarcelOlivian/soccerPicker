@@ -199,7 +199,14 @@ export function PlayerCard({
             )}
           </span>
         )}
-        <span className="sp-badge">{position}</span>
+        <span className="sp-card__head-right">
+          {player.statsVerified && (
+            <span className="sp-badge sp-badge--verified" title="Stats set by a stats vote">
+              ✓
+            </span>
+          )}
+          <span className="sp-badge">{position}</span>
+        </span>
       </div>
       <div className="sp-card__photo">
         {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
@@ -231,6 +238,11 @@ export function PlayerCard({
           </div>
           <div className="sp-card__detail-meta">
             <span className="sp-badge">{position}</span>
+            {player.statsVerified && (
+              <span className="sp-badge sp-badge--verified" title="Stats set by a stats vote">
+                ✓
+              </span>
+            )}
             <span className="sp-card__detail-overall">{rating}</span>
           </div>
           <div className="sp-card__stats">

@@ -73,6 +73,17 @@
   padding: var(--sp-space-2) var(--sp-space-2) 0;
 }
 
+.sp-card__head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sp-badge--verified {
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
 .sp-card__overall {
   font-size: 22px;
   font-weight: 700;
@@ -312,6 +323,11 @@
   gap: var(--sp-space-3);
   padding: var(--sp-space-1) 0;
   border-bottom: var(--sp-border-faint);
+  /* Lets this shrink below its own content width inside a tight grid track
+     (e.g. .sp-vote-panel__steppers on phone) instead of forcing the track —
+     and the whole row — to blow out past the viewport. No-op anywhere it
+     isn't already width-constrained. */
+  min-width: 0;
 }
 
 .sp-stepper__label {
@@ -635,7 +651,11 @@
 
 @media (max-width: 700px) {
   .sp-vote-panel__steppers {
-    grid-template-columns: repeat(3, 1fr);
+    /* minmax(0, 1fr): lets each track shrink below its stepper's
+       min-content width instead of forcing a grid blowout. 2 columns (not
+       3) so each stepper keeps enough room to render without squeezing —
+       3 columns still overflowed a 360-412px phone. */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
