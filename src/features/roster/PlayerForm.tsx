@@ -25,6 +25,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
   const [nickname, setNickname] = useState(initial?.nickname ?? '');
   const [position, setPosition] = useState<Position>(initial?.position ?? 'MID');
   const [stats, setStats] = useState<PlayerStats>(initial?.stats ?? emptyStats());
+  const [statsVerified, setStatsVerified] = useState(initial?.statsVerified ?? false);
   const [taunt, setTaunt] = useState(initial?.taunt ?? '');
   const [photo, setPhoto] = useState<{ photoUrl?: string; photoKey?: string }>({
     photoUrl: initial?.photoUrl,
@@ -37,6 +38,16 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
 
   function updateStat(key: StatKey, value: StatValue) {
     setStats((prev) => ({ ...prev, [key]: value }));
+    // A hand edit means the saved stats no longer exactly match what the
+    // group voted for, so the "verified" stamp no longer applies — even a
+    // single-stat tweak right after a reveal clears it. Re-voting is the
+    // only way to get it back.
+    setStatsVerified(false);
+  }
+
+  function handleApplyVoteStats(newStats: PlayerStats) {
+    setStats(newStats);
+    setStatsVerified(true);
   }
 
   function handleSubmit(e: FormEvent) {
@@ -51,6 +62,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
       photoUrl: photo.photoUrl,
       photoKey: photo.photoKey,
       taunt: taunt.trim() || undefined,
+      statsVerified: statsVerified || undefined,
       createdAt: initial?.createdAt ?? Date.now(),
     };
     onSave(player);
@@ -71,7 +83,7 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
     return (
       <div className="sp-panel sp-player-form">
         <h3>{initial ? 'Edit player' : 'New player'} — stats vote</h3>
-        <VoteHostPanel onApplyStats={setStats} />
+        <VoteHostPanel onApplyStats={handleApplyVoteStats} />
         <div className="sp-player-form__actions">
           <button
             type="button"
