@@ -75,11 +75,48 @@ export interface DraftState {
 /** slotId -> playerId, or null if the slot is empty. */
 export type Placements = Record<string, string | null>;
 
+export type MatchEventType =
+  | 'GOAL'
+  | 'ASSIST'
+  | 'FOUL'
+  | 'SAVE_GK'
+  | 'SUB_IN'
+  | 'SUB_OUT'
+  | 'CORNER_A'
+  | 'CORNER_B';
+
+interface MatchEventBase {
+  id: string;
+  /** Elapsed match-clock time (ms) when this event was recorded. */
+  atMs: number;
+}
+
+/** A single tracked in-match occurrence. GOAL.team is the team credited on the scoreboard — the scorer's own team normally, the opposing team when isOwnGoal is true. */
+export type MatchEvent =
+  | (MatchEventBase & { type: 'GOAL'; playerId: string; team: Team; isOwnGoal: boolean })
+  | (MatchEventBase & { type: 'ASSIST'; playerId: string; goalEventId: string })
+  | (MatchEventBase & { type: 'FOUL'; playerId: string })
+  | (MatchEventBase & { type: 'SAVE_GK'; playerId: string })
+  | (MatchEventBase & { type: 'SUB_IN'; playerId: string; slotId: string })
+  | (MatchEventBase & { type: 'SUB_OUT'; playerId: string; slotId: string })
+  | (MatchEventBase & { type: 'CORNER_A' })
+  | (MatchEventBase & { type: 'CORNER_B' });
+
+export interface MatchClock {
+  startedAt: number | null;
+  pausedAt: number | null;
+  pausedMs: number;
+}
+
 export interface MatchState {
   formation: FormationId;
   attendingIds: string[];
   draft: DraftState;
   placements: Placements;
+  /** 'finished' is reached only via FINISH_MATCH — a one-way transition, not toggled directly. */
+  boardMode: 'setup' | 'tracking' | 'finished';
+  clock: MatchClock;
+  events: MatchEvent[];
 }
 
 /** A player's name/position/overall frozen at the moment a match was saved to history — never a live reference, so editing or deleting a player later can't corrupt a past record. */
@@ -90,6 +127,9 @@ export interface HistoryPlayerSnapshot {
   position: Position;
   overall: number;
   isCaptain: boolean;
+  goals?: number;
+  assists?: number;
+  fouls?: number;
 }
 
 export interface MatchHistoryEntry {
@@ -118,12 +158,19 @@ export function emptyDraft(order: DraftOrder = 'snake'): DraftState {
   return { order, picks: [] };
 }
 
+export function emptyClock(): MatchClock {
+  return { startedAt: null, pausedAt: null, pausedMs: 0 };
+}
+
 export function emptyMatch(formation: FormationId = '6'): MatchState {
   return {
     formation,
     attendingIds: [],
     draft: emptyDraft(),
     placements: {},
+    boardMode: 'setup',
+    clock: emptyClock(),
+    events: [],
   };
 }
 

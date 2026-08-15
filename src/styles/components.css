@@ -790,6 +790,127 @@
   font-weight: 700;
 }
 
+/* ---------- match tracking (Field stage) ---------- */
+
+.sp-mode-toggle {
+  display: flex;
+  gap: 2px;
+}
+
+.sp-mode-toggle__btn {
+  appearance: none;
+  border: var(--sp-border);
+  background: var(--sp-well);
+  color: var(--sp-ink);
+  padding: var(--sp-space-1) var(--sp-space-4);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 11px;
+}
+
+.sp-mode-toggle__btn--active {
+  background: var(--sp-ink);
+  color: var(--sp-bg);
+}
+
+.sp-clock-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-space-3);
+  border: var(--sp-border);
+  background: var(--sp-panel);
+  padding: var(--sp-space-3);
+}
+
+.sp-clock-bar__score {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sp-clock-bar__time {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sp-clock-bar__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-space-2);
+  margin-left: auto;
+}
+
+.sp-match-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-3);
+}
+
+.sp-match-summary__score {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sp-match-summary__teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sp-space-4);
+}
+
+.sp-match-summary__team ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+}
+
+@media (max-width: 700px) {
+  .sp-match-summary__teams {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* A referee popup with no existing precedent in this app (the closest
+   analog, .sp-card__detail, is anchored to its own card, not centered) — so
+   this introduces the app's one full-screen modal pattern, kept flat and
+   square like everything else here. */
+.sp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 27, 24, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+  padding: var(--sp-space-4);
+}
+
+.sp-modal-panel {
+  background: var(--sp-panel-raised);
+  border: var(--sp-border);
+  padding: var(--sp-space-4);
+  width: 100%;
+  max-width: min(320px, calc(100vw - 32px));
+}
+
+.sp-modal-panel__title {
+  margin: 0 0 var(--sp-space-3);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.sp-modal-panel__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-2);
+}
+
 /* ---------- attendance stage ---------- */
 
 .sp-formation-select {

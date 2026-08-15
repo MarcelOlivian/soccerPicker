@@ -6,13 +6,16 @@ import { Slot } from '../../components/Slot';
 import { TeamColumn } from '../../components/TeamColumn';
 import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
-import { picksForTeam, teamShortName } from '../../lib/draft';
+import { otherTeam, picksForTeam, teamShortName } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
 import { snapshotPlayer } from '../../lib/history';
+import { computeElapsedMs, formatClock, isClockRunning } from '../../lib/matchClock';
+import { describeEvent, tallyMatchStats, tallyTeamScore } from '../../lib/matchEvents';
 import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
-import type { Player, Position } from '../../types';
+import type { MatchEvent, Player, Position, Team } from '../../types';
+import { EventMenu } from './EventMenu';
 
 interface BoardStageProps {
   onStartNewMatch: () => void;
@@ -47,7 +50,20 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
   const portrait = usePortraitPitch();
   // Touch input doesn't get native HTML5 drag — it competes with the OS's own
   // long-press handling — so touch falls back to tap-to-select-then-tap-slot.
+  // Also forced true outside setup mode, so a mouse drag can't bypass the
+  // event-menu flow either — see the coarsePointer prop passed below.
   const coarsePointer = useCoarsePointer();
+  const [eventTarget, setEventTarget] = useState<{ playerId: string; team: Team } | null>(null);
+
+  // Ticking re-render for the live clock display. Clock state itself lives
+  // in match.clock, not component state, so it stays correct even if this
+  // component unmounts (navigating to another stage) and remounts mid-match.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (!isClockRunning(match.clock)) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [match.clock.startedAt, match.clock.pausedAt]);
 
   // Autoscroll while dragging a card near the top/bottom edge of the window,
   // so a card below the fold can reach a pitch slot above it (or vice versa)
@@ -137,6 +153,11 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
 
   function handleSlotClick(slot: (typeof slots)[number]) {
     const occupant = match.placements[slot.id];
+    if (!isClient && match.boardMode === 'tracking') {
+      if (occupant) setEventTarget({ playerId: occupant, team: slot.team });
+      return;
+    }
+    if (match.boardMode !== 'setup') return; // finished, or a client's read-only view of tracking
     if (!selectedPlayerId) {
       if (occupant) setSelectedPlayerId(occupant);
       return;
@@ -164,11 +185,13 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
   }
 
   function handleSelectPlayer(playerId: string) {
+    if (match.boardMode !== 'setup') return;
     setSelectedPlayerId((prev) => (prev === playerId ? null : playerId));
   }
 
   function handleDrop(e: DragEvent, slotId: string) {
     e.preventDefault();
+    if (match.boardMode !== 'setup') return;
     const playerId = e.dataTransfer.getData('application/x-player-id');
     const fromSlotId = e.dataTransfer.getData('application/x-from-slot');
     if (!playerId) return;
@@ -186,6 +209,7 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
 
   function handleUnassignDrop(e: DragEvent) {
     e.preventDefault();
+    if (match.boardMode !== 'setup') return;
     const fromSlotId = e.dataTransfer.getData('application/x-from-slot');
     if (fromSlotId) place(fromSlotId, null);
   }
@@ -194,21 +218,71 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     dispatch({ type: 'AUTO_FILL_PLACEMENTS' });
   }
 
+  function handleRecordGoal(isOwnGoal: boolean, assistPlayerId: string | null) {
+    if (!eventTarget) return;
+    const atMs = computeElapsedMs(match.clock);
+    const goalEvent: MatchEvent = {
+      id: crypto.randomUUID(),
+      atMs,
+      type: 'GOAL',
+      playerId: eventTarget.playerId,
+      team: isOwnGoal ? otherTeam(eventTarget.team) : eventTarget.team,
+      isOwnGoal,
+    };
+    dispatch({ type: 'RECORD_EVENT', event: goalEvent });
+    if (assistPlayerId) {
+      dispatch({
+        type: 'RECORD_EVENT',
+        event: { id: crypto.randomUUID(), atMs, type: 'ASSIST', playerId: assistPlayerId, goalEventId: goalEvent.id },
+      });
+    }
+    setEventTarget(null);
+  }
+
+  function handleRecordFoul() {
+    if (!eventTarget) return;
+    dispatch({
+      type: 'RECORD_EVENT',
+      event: { id: crypto.randomUUID(), atMs: computeElapsedMs(match.clock), type: 'FOUL', playerId: eventTarget.playerId },
+    });
+    setEventTarget(null);
+  }
+
   function handleSaveToHistory() {
+    const { scoreA, scoreB } = tallyTeamScore(match.events);
+    const tallies = tallyMatchStats(match.events);
     const entry = {
       id: crypto.randomUUID(),
       date: Date.now(),
       formation: match.formation,
       teamAName,
       teamBName,
-      teamAPlayers: teamAPlayers.map((p) =>
-        snapshotPlayer(p, slotPositionByPlayer.get(p.id) ?? p.position, p.id === match.draft.captainA),
-      ),
-      teamBPlayers: teamBPlayers.map((p) =>
-        snapshotPlayer(p, slotPositionByPlayer.get(p.id) ?? p.position, p.id === match.draft.captainB),
-      ),
+      teamAPlayers: teamAPlayers.map((p) => {
+        const t = tallies.get(p.id);
+        return snapshotPlayer(
+          p,
+          slotPositionByPlayer.get(p.id) ?? p.position,
+          p.id === match.draft.captainA,
+          t?.goals,
+          t?.assists,
+          t?.fouls,
+        );
+      }),
+      teamBPlayers: teamBPlayers.map((p) => {
+        const t = tallies.get(p.id);
+        return snapshotPlayer(
+          p,
+          slotPositionByPlayer.get(p.id) ?? p.position,
+          p.id === match.draft.captainB,
+          t?.goals,
+          t?.assists,
+          t?.fouls,
+        );
+      }),
       strengthA,
       strengthB,
+      scoreA,
+      scoreB,
     };
     dispatch({ type: 'SAVE_MATCH_TO_HISTORY', entry });
     onNavigateToHistory();
@@ -235,10 +309,125 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     );
   }
 
+  const { scoreA, scoreB } = tallyTeamScore(match.events);
+  const eventTallies = tallyMatchStats(match.events);
+  const lastEvent = match.events.at(-1);
+  const lastEventPlayerId = lastEvent && 'playerId' in lastEvent ? lastEvent.playerId : undefined;
+  const lastEventLabel = lastEvent
+    ? describeEvent(lastEvent, (lastEventPlayerId && byId.get(lastEventPlayerId)?.name) || 'Unknown')
+    : null;
+
   return (
     <div className="sp-stage">
       <BalanceMeter result={balance} teamNames={{ A: teamAName, B: teamBName }} />
-      {coarsePointer && <p className="sp-hint">Tap a player, then tap a pitch spot to place them.</p>}
+      {!isClient && match.boardMode !== 'finished' && (
+        <div className="sp-mode-toggle">
+          <button
+            type="button"
+            className={`sp-mode-toggle__btn ${match.boardMode === 'setup' ? 'sp-mode-toggle__btn--active' : ''}`}
+            onClick={() => dispatch({ type: 'SET_BOARD_MODE', mode: 'setup' })}
+          >
+            Setup
+          </button>
+          <button
+            type="button"
+            className={`sp-mode-toggle__btn ${match.boardMode === 'tracking' ? 'sp-mode-toggle__btn--active' : ''}`}
+            onClick={() => dispatch({ type: 'SET_BOARD_MODE', mode: 'tracking' })}
+          >
+            Tracking
+          </button>
+        </div>
+      )}
+      {match.boardMode === 'tracking' && (
+        <div className="sp-clock-bar">
+          <span className="sp-clock-bar__score">
+            {teamAName} {scoreA} – {scoreB} {teamBName}
+          </span>
+          <span className="sp-clock-bar__time">{formatClock(computeElapsedMs(match.clock))}</span>
+          {!isClient && (
+            <div className="sp-clock-bar__controls">
+              <button
+                type="button"
+                className="sp-btn sp-btn--sm"
+                onClick={() => dispatch({ type: isClockRunning(match.clock) ? 'PAUSE_CLOCK' : 'START_CLOCK' })}
+              >
+                {isClockRunning(match.clock) ? 'Pause' : 'Start'}
+              </button>
+              <button
+                type="button"
+                className="sp-btn sp-btn--sm sp-btn--ghost"
+                onClick={() => {
+                  if (confirm('Reset the clock to 00:00?')) dispatch({ type: 'RESET_CLOCK' });
+                }}
+              >
+                Reset
+              </button>
+              <button
+                type="button"
+                className="sp-btn sp-btn--sm sp-btn--ghost"
+                disabled={match.events.length === 0}
+                onClick={() => dispatch({ type: 'UNDO_LAST_EVENT' })}
+              >
+                Undo last{lastEventLabel ? `: ${lastEventLabel}` : ''}
+              </button>
+              <button
+                type="button"
+                className="sp-btn sp-btn--sm sp-btn--danger"
+                onClick={() => {
+                  if (
+                    confirm(
+                      'Finish the match? This locks in the final score and stops tracking — you can still review and save to history afterward.',
+                    )
+                  ) {
+                    dispatch({ type: 'FINISH_MATCH' });
+                  }
+                }}
+              >
+                Finish match
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {match.boardMode === 'finished' && (
+        <div className="sp-panel sp-match-summary">
+          <p className="sp-match-summary__score">
+            {teamAName} {scoreA} – {scoreB} {teamBName}
+          </p>
+          <div className="sp-match-summary__teams">
+            {[
+              { name: teamAName, players: teamAPlayers },
+              { name: teamBName, players: teamBPlayers },
+            ].map(({ name, players: teamPlayers }) => (
+              <div className="sp-match-summary__team" key={name}>
+                <h4>{name}</h4>
+                <ul>
+                  {teamPlayers.map((p) => {
+                    const t = eventTallies.get(p.id);
+                    return (
+                      <li key={p.id}>
+                        {p.name}
+                        {t && (
+                          <span className="sp-hint">
+                            {' '}
+                            {t.goals > 0 && `${t.goals}G `}
+                            {t.assists > 0 && `${t.assists}A `}
+                            {t.fouls > 0 && `${t.fouls}F`}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {coarsePointer && match.boardMode === 'setup' && (
+        <p className="sp-hint">Tap a player, then tap a pitch spot to place them.</p>
+      )}
+      {match.boardMode === 'tracking' && <p className="sp-hint">Tap a placed player to record a goal or foul.</p>}
       {/*
         A single catch-all dragover handler on the whole board area. Per the
         HTML5 DnD spec, a drop is only allowed if the most recent dragover
@@ -263,7 +452,7 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           strength={strengthA}
           selectedPlayerId={selectedPlayerId}
           captainId={match.draft.captainA}
-          coarsePointer={coarsePointer}
+          coarsePointer={coarsePointer || match.boardMode !== 'setup'}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
@@ -275,7 +464,11 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
                 key={slot.id}
                 slot={slot}
                 portrait={portrait}
-                coarsePointer={coarsePointer}
+                // coarsePointer already means "disable native HTML5 drag,
+                // force tap-only" — forcing it true outside setup mode
+                // reuses that exact mechanism to stop a mouse-drag from
+                // bypassing the event-menu/finished-lock guards above.
+                coarsePointer={coarsePointer || match.boardMode !== 'setup'}
                 player={occupant ? byId.get(occupant) : undefined}
                 isSelected={selectedPlayerId === occupant}
                 isCaptain={!!occupant && (occupant === match.draft.captainA || occupant === match.draft.captainB)}
@@ -286,7 +479,10 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
                   e.dataTransfer.setData('application/x-player-id', occupant ?? '');
                   e.dataTransfer.setData('application/x-from-slot', slot.id);
                 }}
-                onClear={() => place(slot.id, null)}
+                onClear={() => {
+                  if (match.boardMode !== 'setup') return;
+                  place(slot.id, null);
+                }}
               />
             );
           })}
@@ -298,32 +494,51 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           strength={strengthB}
           selectedPlayerId={selectedPlayerId}
           captainId={match.draft.captainB}
-          coarsePointer={coarsePointer}
+          coarsePointer={coarsePointer || match.boardMode !== 'setup'}
           onSelectPlayer={handleSelectPlayer}
           onDropUnassign={handleUnassignDrop}
         />
       </div>
       {!isClient && (
         <div className="sp-stage__actions">
-          <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
-            Auto-fill positions
-          </button>
+          {match.boardMode === 'setup' && (
+            <>
+              <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
+                Auto-fill positions
+              </button>
+              <button
+                type="button"
+                className="sp-btn sp-btn--ghost"
+                onClick={() => {
+                  if (confirm('Clear all pitch placements?')) dispatch({ type: 'CLEAR_PLACEMENTS' });
+                }}
+              >
+                Clear placements
+              </button>
+            </>
+          )}
           <button
             type="button"
-            className="sp-btn sp-btn--ghost"
-            onClick={() => {
-              if (confirm('Clear all pitch placements?')) dispatch({ type: 'CLEAR_PLACEMENTS' });
-            }}
+            className={`sp-btn sp-btn--ghost ${match.boardMode === 'finished' ? 'sp-btn--ready' : ''}`}
+            onClick={handleSaveToHistory}
           >
-            Clear placements
-          </button>
-          <button type="button" className="sp-btn sp-btn--ghost" onClick={handleSaveToHistory}>
             Save to history
           </button>
           <button type="button" className="sp-btn sp-btn--ghost" onClick={handleStartNewMatch}>
             Start new match
           </button>
         </div>
+      )}
+      {eventTarget && !isClient && byId.get(eventTarget.playerId) && (
+        <EventMenu
+          player={byId.get(eventTarget.playerId)!}
+          teammates={(eventTarget.team === 'A' ? teamAPlayers : teamBPlayers).filter(
+            (p) => p.id !== eventTarget.playerId && slotPositionByPlayer.has(p.id),
+          )}
+          onRecordGoal={handleRecordGoal}
+          onRecordFoul={handleRecordFoul}
+          onCancel={() => setEventTarget(null)}
+        />
       )}
     </div>
   );

@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { reduce, teamOf } from '../src/state/reducer';
 import { defaultState } from '../src/lib/storage';
-import type { AppState, MatchHistoryEntry, Player } from '../src/types';
+import type { AppState, MatchEvent, MatchHistoryEntry, Player } from '../src/types';
 
 function makePlayer(id: string): Player {
   return {
@@ -162,5 +162,122 @@ describe('reducer: MERGE_PLAYERS prunes match state to the surviving roster', ()
     const next = reduce(state, { type: 'MERGE_PLAYERS', mode: 'merge', players: [reimportedA1] });
     expect(next.match.attendingIds).not.toContain('a1');
     expect(next.match.draft.captainA).toBeUndefined();
+  });
+});
+
+function goalEvent(playerId: string): MatchEvent {
+  return { id: `${playerId}-goal`, atMs: 0, type: 'GOAL', playerId, team: 'A', isOwnGoal: false };
+}
+
+describe('reducer: match-tracking clock actions', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('SET_BOARD_MODE sets the mode', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    expect(state.match.boardMode).toBe('tracking');
+  });
+
+  it('START_CLOCK from never-started sets startedAt and clears pausedMs', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    const state = reduce(defaultState(), { type: 'START_CLOCK' });
+    expect(state.match.clock).toEqual({ startedAt: 1000, pausedAt: null, pausedMs: 0 });
+  });
+
+  it('START_CLOCK from paused accumulates pausedMs and resumes', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    let state = reduce(defaultState(), { type: 'START_CLOCK' });
+    vi.spyOn(Date, 'now').mockReturnValue(2000);
+    state = reduce(state, { type: 'PAUSE_CLOCK' });
+    expect(state.match.clock).toEqual({ startedAt: 1000, pausedAt: 2000, pausedMs: 0 });
+    vi.spyOn(Date, 'now').mockReturnValue(5000);
+    state = reduce(state, { type: 'START_CLOCK' });
+    expect(state.match.clock).toEqual({ startedAt: 1000, pausedAt: null, pausedMs: 3000 });
+  });
+
+  it('START_CLOCK while already running is a no-op', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    const running = reduce(defaultState(), { type: 'START_CLOCK' });
+    vi.spyOn(Date, 'now').mockReturnValue(9999);
+    const again = reduce(running, { type: 'START_CLOCK' });
+    expect(again).toBe(running);
+  });
+
+  it('PAUSE_CLOCK while never-started is a no-op', () => {
+    const state = defaultState();
+    expect(reduce(state, { type: 'PAUSE_CLOCK' })).toBe(state);
+  });
+
+  it('PAUSE_CLOCK while already paused is a no-op', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    let state = reduce(defaultState(), { type: 'START_CLOCK' });
+    vi.spyOn(Date, 'now').mockReturnValue(2000);
+    state = reduce(state, { type: 'PAUSE_CLOCK' });
+    const again = reduce(state, { type: 'PAUSE_CLOCK' });
+    expect(again).toBe(state);
+  });
+
+  it('RESET_CLOCK resets to a fresh clock', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    let state = reduce(defaultState(), { type: 'START_CLOCK' });
+    state = reduce(state, { type: 'RESET_CLOCK' });
+    expect(state.match.clock).toEqual({ startedAt: null, pausedAt: null, pausedMs: 0 });
+  });
+});
+
+describe('reducer: match-tracking event actions', () => {
+  it('RECORD_EVENT appends while tracking', () => {
+    let state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    expect(state.match.events).toHaveLength(1);
+    expect(state.match.events[0]).toMatchObject({ type: 'GOAL', playerId: 'p1' });
+  });
+
+  it('RECORD_EVENT is a no-op outside tracking mode', () => {
+    const state = defaultState(); // boardMode: 'setup'
+    const next = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    expect(next).toBe(state);
+  });
+
+  it('UNDO_LAST_EVENT removes only the most recent event', () => {
+    let state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p2') });
+    state = reduce(state, { type: 'UNDO_LAST_EVENT' });
+    expect(state.match.events.map((e) => ('playerId' in e ? e.playerId : undefined))).toEqual(['p1']);
+  });
+
+  it('UNDO_LAST_EVENT on an empty event log is a no-op', () => {
+    const state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    expect(reduce(state, { type: 'UNDO_LAST_EVENT' })).toBe(state);
+  });
+
+  it('FINISH_MATCH freezes a running clock and locks the board', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    let state = reduce(defaultState(), { type: 'START_CLOCK' });
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    vi.spyOn(Date, 'now').mockReturnValue(4000);
+    state = reduce(state, { type: 'FINISH_MATCH' });
+    expect(state.match.boardMode).toBe('finished');
+    expect(state.match.clock).toEqual({ startedAt: 1000, pausedAt: 4000, pausedMs: 0 });
+    // Further events are rejected once finished.
+    const next = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    expect(next).toBe(state);
+    vi.restoreAllMocks();
+  });
+
+  it('FINISH_MATCH leaves an already-paused clock untouched', () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1000);
+    let state = reduce(defaultState(), { type: 'START_CLOCK' });
+    vi.spyOn(Date, 'now').mockReturnValue(2000);
+    state = reduce(state, { type: 'PAUSE_CLOCK' });
+    const pausedClock = state.match.clock;
+    vi.spyOn(Date, 'now').mockReturnValue(9999);
+    state = reduce(state, { type: 'FINISH_MATCH' });
+    expect(state.match.clock).toEqual(pausedClock);
+    expect(state.match.boardMode).toBe('finished');
+    vi.restoreAllMocks();
   });
 });

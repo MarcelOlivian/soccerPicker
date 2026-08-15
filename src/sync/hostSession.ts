@@ -1,10 +1,22 @@
 import { nextTeam, remaining } from '../lib/draft';
 import { blobToDataUrl, getImageBlob } from '../lib/imageStore';
+import { emptyClock } from '../lib/matchClock';
 import type { Action } from '../state/reducer';
 import { teamOf } from '../state/reducer';
-import type { AppState, Team } from '../types';
+import type { AppState, MatchState, Team } from '../types';
 import type { ClientMessage, HostMessage } from './protocol';
 import type { SyncTransport } from './transport';
+
+/**
+ * Live match-tracking state (clock/events/boardMode) is referee-only and
+ * must never reach a connected draft client — there's no client-side
+ * awareness of it to build, so this strips it to safe defaults on every
+ * outgoing HELLO/STATE payload instead. The host's own local state.match is
+ * untouched; only what goes over the wire is affected.
+ */
+function forSync(match: MatchState): MatchState {
+  return { ...match, boardMode: 'setup', clock: emptyClock(), events: [] };
+}
 
 function slotTeamFromId(slotId: string): Team | undefined {
   if (slotId.startsWith('A-')) return 'A';
@@ -75,7 +87,7 @@ export function createHostSession(deps: HostSessionDeps): HostSession {
   function sendHello() {
     const state = getState();
     const players = state.players.map(({ photoKey: _photoKey, ...rest }) => rest);
-    const hello: HostMessage = { type: 'HELLO', players, match: state.match, youAre: clientTeam };
+    const hello: HostMessage = { type: 'HELLO', players, match: forSync(state.match), youAre: clientTeam };
     transport.send(hello);
     void streamPhotos(state);
   }
@@ -115,7 +127,7 @@ export function createHostSession(deps: HostSessionDeps): HostSession {
   });
 
   return {
-    broadcastState: () => transport.send({ type: 'STATE', match: getState().match }),
+    broadcastState: () => transport.send({ type: 'STATE', match: forSync(getState().match) }),
     dispose: unsubscribe,
   };
 }
