@@ -17,6 +17,7 @@ export function PhotoInput({ value, onChange }: PhotoInputProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -88,6 +89,18 @@ export function PhotoInput({ value, onChange }: PhotoInputProps) {
           >
             {busy ? 'Processing…' : 'Upload photo'}
           </button>
+          <button
+            type="button"
+            className="sp-btn sp-btn--sm"
+            onClick={() => cameraRef.current?.click()}
+            disabled={busy}
+          >
+            <svg viewBox="0 0 20 20" aria-hidden="true" width="12" height="12">
+              <path d="M2 6h4l1.5-2h5L14 6h4v11H2z" fill="none" stroke="currentColor" strokeWidth="1.4" />
+              <circle cx="10" cy="11.5" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            </svg>
+            Take photo
+          </button>
           {(value.photoUrl || value.photoKey) && (
             <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={handleClear}>
               Clear
@@ -98,6 +111,17 @@ export function PhotoInput({ value, onChange }: PhotoInputProps) {
           ref={fileRef}
           type="file"
           accept="image/*"
+          className="sp-visually-hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleFile(file);
+          }}
+        />
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
           className="sp-visually-hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
