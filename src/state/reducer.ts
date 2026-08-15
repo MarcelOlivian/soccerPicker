@@ -1,11 +1,13 @@
 import { autoFillSlots } from '../lib/autoFill';
-import { applyPick, autoDraftRemaining, picksForTeam, resetDraft, undoPick } from '../lib/draft';
+import { applyPick, autoDraftRemaining, otherTeam, picksForTeam, resetDraft, undoPick } from '../lib/draft';
 import { formationSlots } from '../lib/formations';
 import { pruneMatchToPlayers } from '../lib/matchCleanup';
+import { emptyClock } from '../lib/matchClock';
 import type {
   AppState,
   DraftOrder,
   FormationId,
+  MatchEvent,
   MatchHistoryEntry,
   MatchState,
   Placements,
@@ -35,6 +37,13 @@ export type Action =
   | { type: 'SWAP_PLACEMENTS'; slotA: string; slotB: string }
   | { type: 'CLEAR_PLACEMENTS' }
   | { type: 'RESET_MATCH' }
+  | { type: 'SET_BOARD_MODE'; mode: 'setup' | 'tracking' }
+  | { type: 'START_CLOCK' }
+  | { type: 'PAUSE_CLOCK' }
+  | { type: 'RESET_CLOCK' }
+  | { type: 'RECORD_EVENT'; event: MatchEvent }
+  | { type: 'UNDO_LAST_EVENT' }
+  | { type: 'FINISH_MATCH' }
   | { type: 'SAVE_MATCH_TO_HISTORY'; entry: MatchHistoryEntry }
   | { type: 'DELETE_HISTORY_ENTRY'; id: string }
   | { type: 'SET_HISTORY_SCORE'; id: string; scoreA?: number; scoreB?: number }
@@ -150,7 +159,6 @@ export function reduce(state: AppState, action: Action): AppState {
     }
 
     case 'SWAP_DRAFT_TEAMS': {
-      const otherTeam = (t: Team): Team => (t === 'A' ? 'B' : 'A');
       const picks = state.match.draft.picks.map((p) => {
         if (p.playerId === action.playerIdA || p.playerId === action.playerIdB) {
           return { ...p, team: otherTeam(p.team) };
@@ -228,6 +236,51 @@ export function reduce(state: AppState, action: Action): AppState {
 
     case 'RESET_MATCH':
       return { ...state, match: emptyMatch(state.match.formation) };
+
+    case 'SET_BOARD_MODE':
+      return { ...state, match: { ...state.match, boardMode: action.mode } };
+
+    case 'START_CLOCK': {
+      const clock = state.match.clock;
+      const now = Date.now();
+      if (clock.startedAt === null) {
+        return { ...state, match: { ...state.match, clock: { startedAt: now, pausedAt: null, pausedMs: 0 } } };
+      }
+      if (clock.pausedAt === null) return state; // already running
+      return {
+        ...state,
+        match: { ...state.match, clock: { ...clock, pausedAt: null, pausedMs: clock.pausedMs + (now - clock.pausedAt) } },
+      };
+    }
+
+    case 'PAUSE_CLOCK': {
+      const clock = state.match.clock;
+      if (clock.startedAt === null || clock.pausedAt !== null) return state; // never started, or already paused
+      return { ...state, match: { ...state.match, clock: { ...clock, pausedAt: Date.now() } } };
+    }
+
+    case 'RESET_CLOCK':
+      return { ...state, match: { ...state.match, clock: emptyClock() } };
+
+    case 'RECORD_EVENT':
+      // A reducer-level lock, not just a UI gate — once the match is
+      // finished (or was never put into tracking mode), no event can be
+      // recorded even by a stray dispatch.
+      if (state.match.boardMode !== 'tracking') return state;
+      return { ...state, match: { ...state.match, events: [...state.match.events, action.event] } };
+
+    case 'UNDO_LAST_EVENT':
+      return state.match.events.length === 0
+        ? state
+        : { ...state, match: { ...state.match, events: state.match.events.slice(0, -1) } };
+
+    case 'FINISH_MATCH': {
+      const clock = state.match.clock;
+      // Freeze the clock: pause it if it's still running, otherwise leave an
+      // already-paused (or never-started) clock exactly as it is.
+      const frozenClock = clock.startedAt !== null && clock.pausedAt === null ? { ...clock, pausedAt: Date.now() } : clock;
+      return { ...state, match: { ...state.match, boardMode: 'finished', clock: frozenClock } };
+    }
 
     case 'SAVE_MATCH_TO_HISTORY':
       return { ...state, history: [action.entry, ...state.history] };

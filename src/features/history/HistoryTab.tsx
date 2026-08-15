@@ -124,6 +124,13 @@ function HistoryTeamColumn({ team, name, players }: { team: Team; name: string; 
             <span className="sp-roster-row__meta">
               <span className="sp-badge">{p.position}</span>
               <span className="sp-hint">{p.overall}</span>
+              {(p.goals || p.assists || p.fouls) && (
+                <span className="sp-hint">
+                  {p.goals ? `${p.goals}G ` : ''}
+                  {p.assists ? `${p.assists}A ` : ''}
+                  {p.fouls ? `${p.fouls}F` : ''}
+                </span>
+              )}
               {p.isCaptain && <span className="sp-badge">CAPTAIN</span>}
             </span>
           </div>

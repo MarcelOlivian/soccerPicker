@@ -59,6 +59,10 @@ export function teamShortName(captainName: string | undefined, team: Team): stri
   return captainName ? captainName.trim().split(/\s+/)[0] : team;
 }
 
+export function otherTeam(team: Team): Team {
+  return team === 'A' ? 'B' : 'A';
+}
+
 function formatTeamBlock(teamName: string, teamPlayers: Player[], captainId: string | undefined): string {
   const lines = teamPlayers.map((p) => {
     const nickname = p.nickname ? ` (${p.nickname})` : '';

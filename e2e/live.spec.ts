@@ -275,3 +275,50 @@ test('a client reload resyncs to the host\'s current state', async ({ browser })
 
   await context.close();
 });
+
+test('live match tracking (clock/events/boardMode) is host-only and never reaches the client', async ({ browser }) => {
+  test.setTimeout(60_000);
+  const context = await browser.newContext();
+  const host = await context.newPage();
+  const client = await context.newPage();
+  host.on('dialog', (d) => d.accept());
+
+  await attendAndStartDraft(host);
+  await host.getByRole('button', { name: /Auto-draft teams/i }).click();
+  await host.getByRole('button', { name: /Skip to Field/i }).click();
+  await host.getByRole('button', { name: 'Auto-fill positions' }).click();
+
+  await host.getByRole('button', { name: 'Go live' }).click();
+  await expect(host.locator('.sp-connection-chip')).toHaveText('WAITING', { timeout: 15_000 });
+  const sessionCode = await host.locator('.sp-session-share__code').innerText();
+
+  await client.goto(APP_URL);
+  await client.getByRole('tab', { name: 'Match' }).click();
+  await client.fill('#join-code', sessionCode);
+  await client.getByRole('button', { name: 'Join', exact: true }).click();
+  await expect(host.locator('.sp-connection-chip')).toHaveText('LIVE', { timeout: 15_000 });
+
+  // Host starts tracking a real match: switches modes, starts the clock,
+  // and records a goal.
+  await host.getByRole('button', { name: 'Tracking', exact: true }).click();
+  await host.getByRole('button', { name: /^Start$/ }).click();
+  await host.locator('.sp-pitch .sp-card').first().click();
+  await host.getByRole('button', { name: 'Own goal' }).click();
+  await expect(host.locator('.sp-clock-bar')).toBeVisible();
+
+  // The client's own Field view must never show a clock, mode toggle, or
+  // any tracking control — the host's tracking state is never broadcast.
+  await client.getByRole('button', { name: /3\. FIELD/i }).click();
+  await expect(client.locator('.sp-clock-bar')).toHaveCount(0);
+  await expect(client.locator('.sp-mode-toggle')).toHaveCount(0);
+  await expect(client.locator('.sp-match-summary')).toHaveCount(0);
+  // The client's board still behaves like an ordinary setup-mode board:
+  // tapping a placed card selects it rather than opening the event menu.
+  const clientCard = client.locator('.sp-pitch .sp-card[role="button"]').first();
+  if ((await clientCard.count()) > 0) {
+    await clientCard.click();
+    await expect(client.locator('.sp-modal-panel')).toHaveCount(0);
+  }
+
+  await context.close();
+});

@@ -31,6 +31,9 @@ describe('storage', () => {
         attendingIds: ['p1', 'p2'],
         draft: { order: 'snake', picks: [{ playerId: 'p1', team: 'A' }] },
         placements: { 'A-ATT-1': 'p1' },
+        boardMode: 'setup',
+        clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
+        events: [],
       },
       history: [
         {

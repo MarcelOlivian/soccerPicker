@@ -165,4 +165,39 @@ describe('hostSession', () => {
     }
     session.dispose();
   });
+
+  it('never sends live match-tracking state (clock/events/boardMode) to the client', async () => {
+    const [hostT, clientT] = createFakeTransportPair();
+    const h = harness(draftedState());
+    const session = createHostSession({ transport: hostT, getState: h.getState, dispatch: h.dispatch });
+
+    const received: HostMessage[] = [];
+    clientT.onMessage((m) => received.push(m as HostMessage));
+
+    // Host starts tracking a real match locally: clock running, mode
+    // 'tracking', a goal on the board.
+    h.dispatch({ type: 'SET_BOARD_MODE', mode: 'tracking' });
+    h.dispatch({ type: 'START_CLOCK' });
+    h.dispatch({
+      type: 'RECORD_EVENT',
+      event: { id: 'g1', atMs: 1000, type: 'GOAL', playerId: 'a1', team: 'A', isOwnGoal: false },
+    });
+    expect(h.current.match.boardMode).toBe('tracking');
+    expect(h.current.match.events).toHaveLength(1);
+
+    clientT.send({ type: 'JOIN' });
+    await flush();
+    session.broadcastState();
+    await flush();
+
+    for (const msg of received) {
+      if (msg.type === 'HELLO' || msg.type === 'STATE') {
+        expect(msg.match.boardMode).toBe('setup');
+        expect(msg.match.events).toEqual([]);
+        expect(msg.match.clock).toEqual({ startedAt: null, pausedAt: null, pausedMs: 0 });
+      }
+    }
+    expect(received.some((m) => m.type === 'HELLO' || m.type === 'STATE')).toBe(true);
+    session.dispose();
+  });
 });

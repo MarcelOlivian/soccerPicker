@@ -45,6 +45,9 @@ describe('clientSession', () => {
       attendingIds: ['p1'],
       draft: { order: 'snake', picks: [] },
       placements: {},
+      boardMode: 'setup',
+      clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
+      events: [],
     };
     hostT.send({ type: 'HELLO', players: [makePlayer('p1')], match, youAre: 'B' });
     await flush();
@@ -79,6 +82,9 @@ describe('clientSession', () => {
       attendingIds: ['p1', 'p2'],
       draft: { order: 'alternating', picks: [{ playerId: 'p1', team: 'A' }] },
       placements: { 'A-GK-0': 'p1' },
+      boardMode: 'setup',
+      clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
+      events: [],
     };
     hostT.send({ type: 'STATE', match: newMatch });
     await flush();
