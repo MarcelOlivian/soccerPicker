@@ -57,18 +57,28 @@
   background: var(--sp-team-b);
 }
 
+/*
+ * The tint tokens are translucent rgba (so they can double as text-safe
+ * accents elsewhere), but a card's background must stay a fully opaque
+ * solid — otherwise the page's dot-grid canvas (or, on the Field stage,
+ * the green pitch underneath) shows through. Painting the tint as a
+ * background-image layer on top of the solid --sp-panel-raised color
+ * (rather than using it as the background-color directly) keeps the
+ * result opaque while still applying the tint.
+ */
+
 /* Field stage only — makes the captain's card easy to spot in a team panel or on the pitch. */
 .sp-card--captain[data-team='A'] {
-  background: var(--sp-team-a-tint);
+  background: linear-gradient(var(--sp-team-a-tint), var(--sp-team-a-tint)), var(--sp-panel-raised);
 }
 
 .sp-card--captain[data-team='B'] {
-  background: var(--sp-team-b-tint);
+  background: linear-gradient(var(--sp-team-b-tint), var(--sp-team-b-tint)), var(--sp-panel-raised);
 }
 
 /* Not team-scoped, unlike the captain tint above — a verified card should read as tinted everywhere, including the roster grid where cards have no team yet. */
 .sp-card--verified {
-  background: var(--sp-verified-tint);
+  background: linear-gradient(var(--sp-verified-tint), var(--sp-verified-tint)), var(--sp-panel-raised);
 }
 
 .sp-card__flip {
@@ -122,9 +132,13 @@
   gap: 4px;
 }
 
+/* A single glyph doesn't need a 3-letter badge's worth of padding — matters
+   most on the narrow Field-stage slot cards, where it was crowding the
+   position badge next to it. */
 .sp-badge--verified {
   border-color: var(--sp-ok);
   color: var(--sp-ok);
+  padding: 1px 3px;
 }
 
 .sp-badge--compare-on {
@@ -1268,9 +1282,19 @@
 
 /* ---------- radar chart ---------- */
 
+/*
+ * height:100% (not auto) so the chart fills whatever box its container
+ * gives it — including a non-square one, like a card's photo slot on
+ * phone (4:3) — rather than always rendering as a square and overflowing
+ * a shorter container. The square viewBox + default preserveAspectRatio
+ * (xMidYMid meet) then letterboxes cleanly instead of clipping. In an
+ * auto-height container (e.g. the Compare tab's panel) a percentage
+ * height resolves to auto per spec, so this is a no-op there — same
+ * square-by-width sizing as before.
+ */
 .sp-radar-chart {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
 }
 
@@ -1368,7 +1392,12 @@
    * windows need the portrait treatment just as much as phones do.
    */
   :root {
-    --sp-slot-w: 88px;
+    /* A few px wider than the un-stacked default (92px) — headroom for the
+       head-right badge row (position + a possible verified checkmark) to
+       fit without overlapping the clear button, tuned alongside the
+       tighter badge/gap rules below. Widening this doesn't affect the
+       vertical slot spacing the comment below is about. */
+    --sp-slot-w: 96px;
   }
 
   /*
@@ -1380,6 +1409,30 @@
    */
   .sp-slot__card .sp-card__photo {
     display: none;
+  }
+
+  /*
+   * These slot cards are the narrowest cards in the app, and a verified
+   * card's checkmark badge sitting next to the position badge in
+   * .sp-card__head-right was overflowing/overlapping the clear button —
+   * tighten the badges and their gap specifically here rather than
+   * globally, where there's no such pressure.
+   */
+  .sp-slot__card .sp-card__head {
+    padding-left: var(--sp-space-1);
+    padding-right: var(--sp-space-1);
+  }
+
+  .sp-slot__card .sp-card__head-right {
+    gap: 2px;
+  }
+
+  .sp-slot__card .sp-badge {
+    padding: 1px 4px;
+  }
+
+  .sp-slot__card .sp-badge--verified {
+    padding: 1px 2px;
   }
 
   .sp-slot__placeholder {
