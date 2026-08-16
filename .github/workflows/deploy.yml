@@ -39,10 +39,8 @@ jobs:
       - name: Smoke e2e (build + preview)
         run: npx playwright test e2e/smoke.spec.ts
 
-      - name: Build (GitHub Pages base path)
+      - name: Build
         run: npm run build
-        env:
-          GH_PAGES: 'true'
 
       - uses: actions/configure-pages@v5
 
