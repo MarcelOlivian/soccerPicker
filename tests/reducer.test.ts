@@ -84,10 +84,10 @@ describe('reducer: placement team guard', () => {
   });
 });
 
-function makeHistoryEntry(id: string): MatchHistoryEntry {
+function makeHistoryEntry(id: string, date = 1700000000000): MatchHistoryEntry {
   return {
     id,
-    date: 1700000000000,
+    date,
     formation: '6',
     teamAName: 'Marcus',
     teamBName: 'Sofia',
@@ -125,6 +125,50 @@ describe('reducer: match history actions', () => {
     expect(h1?.scoreB).toBe(2);
     expect(h2?.scoreA).toBeUndefined();
     expect(h2?.scoreB).toBeUndefined();
+  });
+});
+
+describe('reducer: MERGE_HISTORY', () => {
+  it('merge dedupes by id — importing the same entry twice does not duplicate', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1', 1000) });
+    state = reduce(state, { type: 'MERGE_HISTORY', entries: [makeHistoryEntry('h1', 1000)], mode: 'merge' });
+    expect(state.history.map((h) => h.id)).toEqual(['h1']);
+  });
+
+  it('merge preserves existing entries not present in the imported set', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1', 1000) });
+    state = reduce(state, { type: 'MERGE_HISTORY', entries: [makeHistoryEntry('h2', 2000)], mode: 'merge' });
+    expect(state.history.map((h) => h.id).sort()).toEqual(['h1', 'h2']);
+  });
+
+  it('replace wholesale-replaces existing history', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('h1', 1000) });
+    state = reduce(state, { type: 'MERGE_HISTORY', entries: [makeHistoryEntry('h2', 2000)], mode: 'replace' });
+    expect(state.history.map((h) => h.id)).toEqual(['h2']);
+  });
+
+  it('merge keeps the result sorted newest-first by date', () => {
+    let state = defaultState();
+    state = reduce(state, { type: 'SAVE_MATCH_TO_HISTORY', entry: makeHistoryEntry('old', 1000) });
+    state = reduce(state, {
+      type: 'MERGE_HISTORY',
+      entries: [makeHistoryEntry('newest', 3000), makeHistoryEntry('middle', 2000)],
+      mode: 'merge',
+    });
+    expect(state.history.map((h) => h.id)).toEqual(['newest', 'middle', 'old']);
+  });
+
+  it('replace with entries passed in non-newest-first order still comes back sorted', () => {
+    let state = defaultState();
+    state = reduce(state, {
+      type: 'MERGE_HISTORY',
+      entries: [makeHistoryEntry('old', 1000), makeHistoryEntry('newest', 3000), makeHistoryEntry('middle', 2000)],
+      mode: 'replace',
+    });
+    expect(state.history.map((h) => h.id)).toEqual(['newest', 'middle', 'old']);
   });
 });
 

@@ -1,4 +1,4 @@
-import type { Player } from '../types';
+import type { MatchHistoryEntry, Player } from '../types';
 import { blobToDataUrl, getImageBlob, putImage } from './imageStore';
 
 /**
@@ -13,9 +13,10 @@ interface ExportedPlayer extends Omit<Player, 'photoKey'> {
 }
 
 interface ExportFile {
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: string;
   players: ExportedPlayer[];
+  history: MatchHistoryEntry[];
 }
 
 function dataUrlToBlob(dataUrl: string): Blob {
@@ -27,7 +28,7 @@ function dataUrlToBlob(dataUrl: string): Blob {
   return new Blob([bytes], { type: mime });
 }
 
-export async function buildExportFile(players: Player[]): Promise<ExportFile> {
+export async function buildExportFile(players: Player[], history: MatchHistoryEntry[]): Promise<ExportFile> {
   const exported: ExportedPlayer[] = [];
   for (const player of players) {
     const { photoKey, ...rest } = player;
@@ -38,16 +39,16 @@ export async function buildExportFile(players: Player[]): Promise<ExportFile> {
       exported.push(rest);
     }
   }
-  return { schemaVersion: 1, exportedAt: new Date().toISOString(), players: exported };
+  return { schemaVersion: 2, exportedAt: new Date().toISOString(), players: exported, history };
 }
 
 export function exportFileName(date = new Date()): string {
   return `soccerpicker-roster-${date.toISOString().slice(0, 10)}.json`;
 }
 
-/** Triggers a browser download of the full roster, including inlined photos. */
-export async function downloadRosterExport(players: Player[]): Promise<void> {
-  const file = await buildExportFile(players);
+/** Triggers a browser download of the full roster and match history, including inlined photos. */
+export async function downloadRosterExport(players: Player[], history: MatchHistoryEntry[]): Promise<void> {
+  const file = await buildExportFile(players, history);
   const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -61,8 +62,10 @@ export async function downloadRosterExport(players: Player[]): Promise<void> {
 
 export type ImportMode = 'merge' | 'replace';
 
-/** Parses an exported roster JSON string, rehydrating any inlined photos back into IndexedDB. */
-export async function parseRosterImportFile(jsonText: string): Promise<Player[]> {
+/** Parses an exported roster+history JSON string, rehydrating any inlined player photos back into IndexedDB. */
+export async function parseRosterImportFile(
+  jsonText: string,
+): Promise<{ players: Player[]; history: MatchHistoryEntry[] }> {
   const parsed = JSON.parse(jsonText) as Partial<ExportFile>;
   if (!parsed || !Array.isArray(parsed.players)) {
     throw new Error('This file does not look like a soccerPicker roster export.');
@@ -93,5 +96,10 @@ export async function parseRosterImportFile(jsonText: string): Promise<Player[]>
       createdAt: rest.createdAt ?? Date.now(),
     });
   }
-  return players;
+
+  // schemaVersion 1 exports predate history — treat a missing/invalid
+  // `history` field as empty rather than rejecting an otherwise-valid file.
+  const history: MatchHistoryEntry[] = Array.isArray(parsed.history) ? parsed.history : [];
+
+  return { players, history };
 }
