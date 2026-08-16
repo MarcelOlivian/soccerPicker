@@ -862,11 +862,16 @@
   gap: var(--sp-space-3);
 }
 
+/* Everyone gathers round the phone at the final whistle to see this — sized
+   and centered to read clearly at a glance, not just another line of text. */
 .sp-match-summary__score {
-  margin: 0;
-  font-size: 18px;
+  margin: 0 0 var(--sp-space-2);
+  padding-bottom: var(--sp-space-3);
+  border-bottom: var(--sp-border);
+  font-size: 28px;
   font-weight: 700;
   letter-spacing: 0.04em;
+  text-align: center;
 }
 
 .sp-match-summary__teams {
@@ -884,10 +889,45 @@
   gap: var(--sp-space-1);
 }
 
+.sp-match-summary__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
 @media (max-width: 700px) {
   .sp-match-summary__teams {
     grid-template-columns: 1fr;
   }
+}
+
+/* ---------- event feed (compact ticker + expandable chronological log) ---------- */
+
+.sp-event-feed {
+  border: var(--sp-border);
+  background: var(--sp-panel);
+  padding: var(--sp-space-3);
+}
+
+.sp-event-feed__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-space-2);
+  margin-bottom: var(--sp-space-2);
+}
+
+.sp-event-feed__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-1);
+  font-size: 12px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
 /* A referee popup with no existing precedent in this app (the closest

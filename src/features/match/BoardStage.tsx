@@ -10,11 +10,12 @@ import { otherTeam, picksForTeam, teamShortName } from '../../lib/draft';
 import { formationSlots } from '../../lib/formations';
 import { snapshotPlayer } from '../../lib/history';
 import { computeElapsedMs, formatClock, isClockRunning } from '../../lib/matchClock';
-import { describeEvent, tallyMatchStats, tallyTeamScore } from '../../lib/matchEvents';
+import { buildEventFeed, describeEvent, formatMatchSummaryForShare, tallyMatchStats, tallyTeamScore } from '../../lib/matchEvents';
 import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
 import type { MatchEvent, Player, Position, Team } from '../../types';
+import { EventFeed } from './EventFeed';
 import { EventMenu } from './EventMenu';
 
 interface BoardStageProps {
@@ -54,6 +55,8 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
   // event-menu flow either — see the coarsePointer prop passed below.
   const coarsePointer = useCoarsePointer();
   const [eventTarget, setEventTarget] = useState<{ playerId: string; team: Team } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
 
   // Ticking re-render for the live clock display. Clock state itself lives
   // in match.clock, not component state, so it stays correct even if this
@@ -288,6 +291,31 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     onNavigateToHistory();
   }
 
+  async function handleCopyForWhatsApp() {
+    const { scoreA, scoreB } = tallyTeamScore(match.events);
+    const tallies = tallyMatchStats(match.events);
+    const summaryLine = (p: Player) => {
+      const t = tallies.get(p.id);
+      return { name: p.name, goals: t?.goals ?? 0, assists: t?.assists ?? 0, fouls: t?.fouls ?? 0 };
+    };
+    const text = formatMatchSummaryForShare(
+      teamAName,
+      scoreA,
+      teamAPlayers.map(summaryLine),
+      teamBName,
+      scoreB,
+      teamBPlayers.map(summaryLine),
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setNoticeKind('info');
+      setNotice('Match summary copied to clipboard.');
+    } catch {
+      setNoticeKind('danger');
+      setNotice('Could not access the clipboard.');
+    }
+  }
+
   function handleStartNewMatch() {
     if (
       confirm(
@@ -316,6 +344,11 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
   const lastEventLabel = lastEvent
     ? describeEvent(lastEvent, (lastEventPlayerId && byId.get(lastEventPlayerId)?.name) || 'Unknown')
     : null;
+  const eventFeed = buildEventFeed(
+    match.events,
+    (playerId) => byId.get(playerId)?.name ?? 'Unknown',
+    (team) => (team === 'A' ? teamAName : teamBName),
+  );
 
   return (
     <div className="sp-stage">
@@ -389,6 +422,7 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           )}
         </div>
       )}
+      {match.boardMode !== 'setup' && <EventFeed entries={eventFeed} />}
       {match.boardMode === 'finished' && (
         <div className="sp-panel sp-match-summary">
           <p className="sp-match-summary__score">
@@ -422,6 +456,26 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
               </div>
             ))}
           </div>
+          {!isClient && (
+            <div className="sp-match-summary__actions">
+              {notice && (
+                <span className={`sp-header-notice ${noticeKind === 'danger' ? 'sp-header-notice--danger' : ''}`}>
+                  {notice}
+                  <button
+                    type="button"
+                    className="sp-header-notice__close"
+                    onClick={() => setNotice(null)}
+                    aria-label="Dismiss"
+                  >
+                    ×
+                  </button>
+                </span>
+              )}
+              <button type="button" className="sp-btn sp-btn--ghost" onClick={handleCopyForWhatsApp}>
+                Copy for WhatsApp
+              </button>
+            </div>
+          )}
         </div>
       )}
       {coarsePointer && match.boardMode === 'setup' && (
