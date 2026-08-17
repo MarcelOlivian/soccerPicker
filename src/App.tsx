@@ -43,7 +43,7 @@ function AppShell() {
     <div className="sp-app">
       <header className="sp-header">
         <div className="sp-header__brand">
-          SquadRef
+          S Q U A D - R E F
           <small>Draft fair. Ref easy. Track everything.</small>
         </div>
         <Tabs
