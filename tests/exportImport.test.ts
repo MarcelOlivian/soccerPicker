@@ -44,7 +44,7 @@ function makeHistoryEntry(id: string): MatchHistoryEntry {
 describe('exportImport', () => {
   it('exportFileName includes an ISO date and the app prefix', () => {
     const name = exportFileName(new Date('2026-03-05T12:00:00Z'));
-    expect(name).toBe('soccerpicker-roster-2026-03-05.json');
+    expect(name).toBe('squadref-roster-2026-03-05.json');
   });
 
   it('buildExportFile passes through URL-photo players unchanged', async () => {

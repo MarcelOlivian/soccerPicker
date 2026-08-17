@@ -43,7 +43,7 @@ export async function buildExportFile(players: Player[], history: MatchHistoryEn
 }
 
 export function exportFileName(date = new Date()): string {
-  return `soccerpicker-roster-${date.toISOString().slice(0, 10)}.json`;
+  return `squadref-roster-${date.toISOString().slice(0, 10)}.json`;
 }
 
 /** Triggers a browser download of the full roster and match history, including inlined photos. */
@@ -68,7 +68,7 @@ export async function parseRosterImportFile(
 ): Promise<{ players: Player[]; history: MatchHistoryEntry[] }> {
   const parsed = JSON.parse(jsonText) as Partial<ExportFile>;
   if (!parsed || !Array.isArray(parsed.players)) {
-    throw new Error('This file does not look like a soccerPicker roster export.');
+    throw new Error('This file does not look like a SquadRef roster export.');
   }
 
   const players: Player[] = [];
