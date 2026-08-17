@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { FORMATION_LABELS } from '../../lib/formations';
+import { buildEventFeed } from '../../lib/matchEvents';
 import { useAppState } from '../../state/AppContext';
 import type { HistoryPlayerSnapshot, MatchHistoryEntry, Team } from '../../types';
+import { EventFeed } from '../match/EventFeed';
 
 export function HistoryTab() {
   const { state, dispatch } = useAppState();
@@ -46,6 +48,15 @@ function HistoryEntryPanel({
   const hasScore = entry.scoreA !== undefined && entry.scoreB !== undefined;
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
+
+  // entry.events is optional — absent on any match saved before this field
+  // existed, so this must fall back to [] rather than crash.
+  const nameLookup = new Map([...entry.teamAPlayers, ...entry.teamBPlayers].map((p) => [p.id, p.name]));
+  const eventFeed = buildEventFeed(
+    entry.events ?? [],
+    (id) => nameLookup.get(id) ?? 'Unknown',
+    (team) => (team === 'A' ? entry.teamAName : entry.teamBName),
+  );
 
   function handleSaveScore() {
     const a = Number(scoreA);
@@ -106,6 +117,7 @@ function HistoryEntryPanel({
         <HistoryTeamColumn team="A" name={entry.teamAName} players={entry.teamAPlayers} />
         <HistoryTeamColumn team="B" name={entry.teamBName} players={entry.teamBPlayers} />
       </div>
+      <EventFeed entries={eventFeed} />
     </div>
   );
 }
@@ -124,11 +136,13 @@ function HistoryTeamColumn({ team, name, players }: { team: Team; name: string; 
             <span className="sp-roster-row__meta">
               <span className="sp-badge">{p.position}</span>
               <span className="sp-hint">{p.overall}</span>
-              {(p.goals || p.assists || p.fouls) && (
+              {(p.goals || p.assists || p.fouls || p.saves || p.concedes) && (
                 <span className="sp-hint">
                   {p.goals ? `${p.goals}G ` : ''}
                   {p.assists ? `${p.assists}A ` : ''}
-                  {p.fouls ? `${p.fouls}F` : ''}
+                  {p.fouls ? `${p.fouls}F ` : ''}
+                  {p.saves ? `${p.saves}SV ` : ''}
+                  {p.concedes ? `${p.concedes}CN` : ''}
                 </span>
               )}
               {p.isCaptain && <span className="sp-badge">CAPTAIN</span>}

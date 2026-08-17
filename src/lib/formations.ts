@@ -82,6 +82,10 @@ export function slotsForTeam(formationId: FormationId, team: Team): SlotDef[] {
   return formationSlots(formationId).filter((s) => s.team === team);
 }
 
+export function findSlot(formationId: FormationId, team: Team, position: Position): SlotDef | undefined {
+  return formationSlots(formationId).find((s) => s.team === team && s.position === position);
+}
+
 /**
  * Where a slot sits inside the pitch box, as CSS percentages.
  *

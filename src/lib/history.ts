@@ -9,6 +9,8 @@ export function snapshotPlayer(
   goals = 0,
   assists = 0,
   fouls = 0,
+  saves = 0,
+  concedes = 0,
 ): HistoryPlayerSnapshot {
   return {
     id: player.id,
@@ -20,5 +22,7 @@ export function snapshotPlayer(
     goals: goals || undefined,
     assists: assists || undefined,
     fouls: fouls || undefined,
+    saves: saves || undefined,
+    concedes: concedes || undefined,
   };
 }

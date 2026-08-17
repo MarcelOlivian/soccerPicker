@@ -35,17 +35,21 @@ describe('snapshotPlayer', () => {
     expect(atPreferred.position).toBe('ATT');
   });
 
-  it('passes through goals/assists/fouls when given', () => {
-    const snap = snapshotPlayer(makeStriker(), 'ATT', false, 2, 1, 3);
+  it('passes through goals/assists/fouls/saves/concedes when given', () => {
+    const snap = snapshotPlayer(makeStriker(), 'ATT', false, 2, 1, 3, 4, 5);
     expect(snap.goals).toBe(2);
     expect(snap.assists).toBe(1);
     expect(snap.fouls).toBe(3);
+    expect(snap.saves).toBe(4);
+    expect(snap.concedes).toBe(5);
   });
 
-  it('omits goals/assists/fouls (leaves them undefined) when 0 or unspecified', () => {
+  it('omits goals/assists/fouls/saves/concedes (leaves them undefined) when 0 or unspecified', () => {
     const snap = snapshotPlayer(makeStriker(), 'ATT', false);
     expect(snap.goals).toBeUndefined();
     expect(snap.assists).toBeUndefined();
     expect(snap.fouls).toBeUndefined();
+    expect(snap.saves).toBeUndefined();
+    expect(snap.concedes).toBeUndefined();
   });
 });

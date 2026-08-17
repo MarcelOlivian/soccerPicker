@@ -1,4 +1,5 @@
-import type { MatchEvent, Team } from '../types';
+import { formatClock } from './matchClock';
+import type { FoulType, MatchEvent, RestartType, Team } from '../types';
 
 export function tallyTeamScore(events: MatchEvent[]): { scoreA: number; scoreB: number } {
   let scoreA = 0;
@@ -15,13 +16,15 @@ export interface PlayerTally {
   goals: number;
   assists: number;
   fouls: number;
+  saves: number;
+  concedes: number;
 }
 
 /** Own goals are excluded from the scorer's personal tally (not an achievement) but still count toward the opposing team's scoreboard total via tallyTeamScore. */
 export function tallyMatchStats(events: MatchEvent[]): Map<string, PlayerTally> {
   const tally = new Map<string, PlayerTally>();
   const bump = (id: string, field: keyof PlayerTally) => {
-    const t = tally.get(id) ?? { goals: 0, assists: 0, fouls: 0 };
+    const t = tally.get(id) ?? { goals: 0, assists: 0, fouls: 0, saves: 0, concedes: 0 };
     t[field]++;
     tally.set(id, t);
   };
@@ -29,44 +32,72 @@ export function tallyMatchStats(events: MatchEvent[]): Map<string, PlayerTally> 
     if (e.type === 'GOAL' && !e.isOwnGoal) bump(e.playerId, 'goals');
     if (e.type === 'ASSIST') bump(e.playerId, 'assists');
     if (e.type === 'FOUL') bump(e.playerId, 'fouls');
+    if (e.type === 'SAVE_GK') bump(e.playerId, 'saves');
+    if (e.type === 'GK_CONCEDED') bump(e.playerId, 'concedes');
   }
   return tally;
 }
 
-/** Human-readable label for the Undo button, e.g. "GOAL — Marcus", "OWN GOAL — Sofia", "FOUL — Ana". */
-export function describeEvent(event: MatchEvent, playerName: string): string {
+const FOUL_TYPE_LABELS: Record<FoulType, string> = { HANDBALL: 'Handball', FOUL_PLAY: 'Foul Play' };
+const RESTART_LABELS: Record<RestartType, string> = { FREE_KICK: 'Free Kick', PENALTY: 'Penalty' };
+
+/** The event UNDO_LAST_EVENT will actually act on: the most recent entry that isn't a POSITION_CHANGE (those are permanent log history, never undoable). Single source of truth so the reducer's removal and the UI's button label/disabled-state never disagree about which event "last" means. */
+export function findLastUndoableEvent(events: MatchEvent[]): MatchEvent | undefined {
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i].type !== 'POSITION_CHANGE') return events[i];
+  }
+  return undefined;
+}
+
+/** Human-readable label for the Undo button, e.g. "GOAL — Marcus", "OWN GOAL — Sofia", "FOUL (Handball) — Ana". */
+export function describeEvent(
+  event: MatchEvent,
+  playerName: (playerId: string) => string,
+  teamName: (team: Team) => string,
+): string {
   switch (event.type) {
     case 'GOAL':
-      return `${event.isOwnGoal ? 'OWN GOAL' : 'GOAL'} — ${playerName}`;
+      return `${event.isOwnGoal ? 'OWN GOAL' : 'GOAL'} — ${playerName(event.playerId)}`;
     case 'ASSIST':
-      return `ASSIST — ${playerName}`;
+      return `ASSIST — ${playerName(event.playerId)}`;
     case 'FOUL':
-      return `FOUL — ${playerName}`;
+      return `FOUL (${FOUL_TYPE_LABELS[event.foulType]}) — ${playerName(event.playerId)}`;
+    case 'SAVE_GK':
+      return `SAVE — ${playerName(event.playerId)}`;
+    case 'GK_CONCEDED':
+      return `CONCEDED — ${playerName(event.playerId)}`;
+    case 'POSITION_CHANGE':
+      return `${playerName(event.playerId)}: ${event.fromPosition} → ${event.toPosition}`;
+    case 'CORNER':
+      return `CORNER — ${teamName(event.team)}`;
+    case 'THROW_IN':
+      return `THROW-IN — ${teamName(event.team)}`;
+    case 'SUB_IN':
+      return `SUB IN — ${playerName(event.playerId)}`;
+    case 'SUB_OUT':
+      return `SUB OUT — ${playerName(event.playerId)}`;
     default:
-      return event.type;
+      // Unreachable — the switch above is exhaustive over MatchEventType —
+      // but kept as a defensive fallback for any future event type added to
+      // the union without a case here.
+      return (event as MatchEvent).type;
   }
 }
 
-/** Whole elapsed minutes as a football-style marker, e.g. 14' — same 0-based, floor()'d semantics as formatClock, so the two never disagree about "when" something happened. */
-export function formatMatchMinute(atMs: number): string {
-  return `${Math.floor(atMs / 60000)}'`;
-}
-
 export interface EventFeedEntry {
-  /** The id of the GOAL/FOUL event this entry represents (an ASSIST is folded into its GOAL's entry, never its own). */
+  /** The id of the primary event this entry represents (an ASSIST/GK_CONCEDED is folded into its GOAL's entry, a paired POSITION_CHANGE into its swap-mate's, never shown as its own entry). */
   id: string;
   atMs: number;
   text: string;
 }
 
 /**
- * Turns the raw event log into one display-ready line per goal/foul,
- * chronological (oldest first, matching the array itself). An ASSIST is
- * always dispatched immediately after its GOAL (see BoardStage's
- * handleRecordGoal), so it's folded into that GOAL's line rather than
- * shown as its own entry — "GOAL — Marcus (Assist: Andrei)". An own goal
- * is attributed to the team it's credited to, with the scorer named
- * alongside for dispute resolution — "GOAL (OG) — Team B (Priya)".
+ * Turns the raw event log into one display-ready line per goal/foul/save/
+ * swap/team-event, chronological (oldest first, matching the array itself).
+ * A GOAL optionally folds in an ASSIST and/or a GK_CONCEDED dispatched
+ * immediately after it (see BoardStage's handleRecordGoal — at most one of
+ * each, in either order), and a cross-position SWAP folds its two adjacent
+ * POSITION_CHANGE entries into one line.
  */
 export function buildEventFeed(
   events: MatchEvent[],
@@ -76,21 +107,61 @@ export function buildEventFeed(
   const entries: EventFeedEntry[] = [];
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
+    const minute = formatClock(event.atMs);
+
     if (event.type === 'GOAL') {
-      const next = events[i + 1];
-      const assist = next && next.type === 'ASSIST' && next.goalEventId === event.id ? next : undefined;
-      const minute = formatMatchMinute(event.atMs);
+      let assist: Extract<MatchEvent, { type: 'ASSIST' }> | undefined;
+      let conceded: Extract<MatchEvent, { type: 'GK_CONCEDED' }> | undefined;
+      let j = i + 1;
+      while (j < events.length && j <= i + 2) {
+        const candidate = events[j];
+        if (!assist && candidate.type === 'ASSIST' && candidate.goalEventId === event.id) {
+          assist = candidate;
+          j++;
+        } else if (!conceded && candidate.type === 'GK_CONCEDED' && candidate.goalEventId === event.id) {
+          conceded = candidate;
+          j++;
+        } else {
+          break;
+        }
+      }
+      const assistText = assist ? ` (Assist: ${playerName(assist.playerId)})` : '';
+      const concededText = conceded ? ` (GK: ${playerName(conceded.playerId)})` : '';
       const text = event.isOwnGoal
-        ? `${minute} GOAL (OG) — ${teamName(event.team)} (${playerName(event.playerId)})`
-        : `${minute} GOAL — ${playerName(event.playerId)}${assist ? ` (Assist: ${playerName(assist.playerId)})` : ''}`;
+        ? `${minute} GOAL (OG) — ${teamName(event.team)} (${playerName(event.playerId)})${assistText}${concededText}`
+        : `${minute} GOAL — ${playerName(event.playerId)}${assistText}${concededText}`;
       entries.push({ id: event.id, atMs: event.atMs, text });
-      if (assist) i++; // consumed alongside its goal
+      i = j - 1; // consumed alongside its goal
+
     } else if (event.type === 'FOUL') {
-      entries.push({ id: event.id, atMs: event.atMs, text: `${formatMatchMinute(event.atMs)} FOUL — ${playerName(event.playerId)}` });
+      entries.push({
+        id: event.id,
+        atMs: event.atMs,
+        text: `${minute} FOUL (${FOUL_TYPE_LABELS[event.foulType]}, ${RESTART_LABELS[event.restart]}) — ${playerName(event.playerId)}`,
+      });
+
+    } else if (event.type === 'SAVE_GK') {
+      const shooter = event.shooterId ? ` (vs ${playerName(event.shooterId)})` : ' (unclear shot)';
+      entries.push({ id: event.id, atMs: event.atMs, text: `${minute} SAVE — ${playerName(event.playerId)}${shooter}` });
+
+    } else if (event.type === 'POSITION_CHANGE') {
+      const next = events[i + 1];
+      // The reducer always pushes a swap's two entries adjacently, same atMs.
+      const pair = next && next.type === 'POSITION_CHANGE' && next.atMs === event.atMs ? next : undefined;
+      const text = pair
+        ? `${minute} SWAP — ${playerName(event.playerId)} (${event.fromPosition}→${event.toPosition}) / ${playerName(pair.playerId)} (${pair.fromPosition}→${pair.toPosition})`
+        : `${minute} POSITION CHANGE — ${playerName(event.playerId)} (${event.fromPosition}→${event.toPosition})`;
+      entries.push({ id: event.id, atMs: event.atMs, text });
+      if (pair) i++;
+
+    } else if (event.type === 'CORNER') {
+      entries.push({ id: event.id, atMs: event.atMs, text: `${minute} CORNER — ${teamName(event.team)}` });
+    } else if (event.type === 'THROW_IN') {
+      entries.push({ id: event.id, atMs: event.atMs, text: `${minute} THROW-IN — ${teamName(event.team)}` });
     }
-    // A standalone ASSIST (its GOAL undone out from under it) or any
-    // not-yet-UI'd event type (SAVE_GK, SUB_IN/OUT, CORNER_A/B) has no
-    // line of its own — nothing else in this round produces those states.
+    // A standalone ASSIST/GK_CONCEDED (consumed above, or orphaned by an
+    // undo) and SUB_IN/SUB_OUT (still unused this round) have no line of
+    // their own.
   }
   return entries;
 }
@@ -100,6 +171,8 @@ export interface SummaryPlayerLine {
   goals: number;
   assists: number;
   fouls: number;
+  saves: number;
+  concedes: number;
 }
 
 /** Plain-text final score + per-player tallies, e.g. for pasting into a chat — mirrors lib/draft.ts's formatTeamsList. */
@@ -112,7 +185,13 @@ export function formatMatchSummaryForShare(
   teamBPlayers: SummaryPlayerLine[],
 ): string {
   const formatLine = (p: SummaryPlayerLine) => {
-    const tally = [p.goals && `${p.goals}G`, p.assists && `${p.assists}A`, p.fouls && `${p.fouls}F`].filter(Boolean);
+    const tally = [
+      p.goals && `${p.goals}G`,
+      p.assists && `${p.assists}A`,
+      p.fouls && `${p.fouls}F`,
+      p.saves && `${p.saves}SV`,
+      p.concedes && `${p.concedes}CN`,
+    ].filter(Boolean);
     return `- ${p.name}${tally.length ? ` (${tally.join(' ')})` : ''}`;
   };
   return [

@@ -75,15 +75,20 @@ export interface DraftState {
 /** slotId -> playerId, or null if the slot is empty. */
 export type Placements = Record<string, string | null>;
 
+export type FoulType = 'HANDBALL' | 'FOUL_PLAY';
+export type RestartType = 'FREE_KICK' | 'PENALTY';
+
 export type MatchEventType =
   | 'GOAL'
   | 'ASSIST'
   | 'FOUL'
   | 'SAVE_GK'
+  | 'GK_CONCEDED'
+  | 'POSITION_CHANGE'
+  | 'CORNER'
+  | 'THROW_IN'
   | 'SUB_IN'
-  | 'SUB_OUT'
-  | 'CORNER_A'
-  | 'CORNER_B';
+  | 'SUB_OUT';
 
 interface MatchEventBase {
   id: string;
@@ -95,12 +100,14 @@ interface MatchEventBase {
 export type MatchEvent =
   | (MatchEventBase & { type: 'GOAL'; playerId: string; team: Team; isOwnGoal: boolean })
   | (MatchEventBase & { type: 'ASSIST'; playerId: string; goalEventId: string })
-  | (MatchEventBase & { type: 'FOUL'; playerId: string })
-  | (MatchEventBase & { type: 'SAVE_GK'; playerId: string })
+  | (MatchEventBase & { type: 'FOUL'; playerId: string; foulType: FoulType; restart: RestartType })
+  | (MatchEventBase & { type: 'SAVE_GK'; playerId: string; shooterId?: string })
+  | (MatchEventBase & { type: 'GK_CONCEDED'; playerId: string; goalEventId: string })
+  | (MatchEventBase & { type: 'POSITION_CHANGE'; playerId: string; fromPosition: Position; toPosition: Position })
+  | (MatchEventBase & { type: 'CORNER'; team: Team })
+  | (MatchEventBase & { type: 'THROW_IN'; team: Team })
   | (MatchEventBase & { type: 'SUB_IN'; playerId: string; slotId: string })
-  | (MatchEventBase & { type: 'SUB_OUT'; playerId: string; slotId: string })
-  | (MatchEventBase & { type: 'CORNER_A' })
-  | (MatchEventBase & { type: 'CORNER_B' });
+  | (MatchEventBase & { type: 'SUB_OUT'; playerId: string; slotId: string });
 
 export interface MatchClock {
   startedAt: number | null;
@@ -117,6 +124,8 @@ export interface MatchState {
   boardMode: 'setup' | 'tracking' | 'finished';
   clock: MatchClock;
   events: MatchEvent[];
+  /** True once boardMode has ever been set to 'tracking' this match. Never reset except by RESET_MATCH's emptyMatch(). Gates whether a SWAP_PLACEMENTS logs a POSITION_CHANGE — a pre-match arrangement shouldn't, a mid-match correction should. */
+  trackingStarted: boolean;
 }
 
 /** A player's name/position/overall frozen at the moment a match was saved to history — never a live reference, so editing or deleting a player later can't corrupt a past record. */
@@ -130,6 +139,8 @@ export interface HistoryPlayerSnapshot {
   goals?: number;
   assists?: number;
   fouls?: number;
+  saves?: number;
+  concedes?: number;
 }
 
 export interface MatchHistoryEntry {
@@ -145,6 +156,8 @@ export interface MatchHistoryEntry {
   strengthB: number;
   scoreA?: number;
   scoreB?: number;
+  /** Optional — absent on any entry saved before this field existed. Callers must fall back to []. */
+  events?: MatchEvent[];
 }
 
 export interface AppState {
@@ -171,6 +184,7 @@ export function emptyMatch(formation: FormationId = '6'): MatchState {
     boardMode: 'setup',
     clock: emptyClock(),
     events: [],
+    trackingStarted: false,
   };
 }
 
