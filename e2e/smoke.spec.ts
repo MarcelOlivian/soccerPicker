@@ -80,9 +80,29 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
   await expect(page.locator('.sp-balance-meter__label[data-team="A"]')).not.toHaveText(strengthBefore);
 });
 
-test('exports a roster and re-imports it after clearing', async ({ page }) => {
+test('exports a roster and match history, and re-imports both after clearing', async ({ page }) => {
+  page.on('dialog', (dialog) => dialog.accept());
+
   await page.getByRole('button', { name: /Load 14 demo players/i }).click();
 
+  // Save one match to history before exporting, so the export file carries
+  // both a roster and a history entry.
+  await page.getByRole('tab', { name: 'Match' }).click();
+  const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
+  const count = await checkboxes.count();
+  for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
+  await page.getByRole('button', { name: /Continue to draft/i }).click();
+  await page.selectOption('#captain-a', { index: 1 });
+  await page.selectOption('#captain-b', { index: 2 });
+  await page.getByRole('button', { name: /Start draft/i }).click();
+  await page.getByRole('button', { name: /Auto-draft teams/i }).click();
+  await page.getByRole('button', { name: /Skip to Field/i }).click();
+  await page.getByRole('button', { name: 'Auto-fill positions' }).click();
+  await page.getByRole('button', { name: 'Save to history' }).click();
+  await expect(page.getByRole('tab', { name: 'History', selected: true })).toBeVisible();
+  await expect(page.locator('.sp-panel')).toHaveCount(1);
+
+  await page.getByRole('tab', { name: 'Setup' }).click();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Export' }).click(),
@@ -90,7 +110,6 @@ test('exports a roster and re-imports it after clearing', async ({ page }) => {
   const path = await download.path();
   expect(path).toBeTruthy();
 
-  page.on('dialog', (dialog) => dialog.accept());
   for (let i = 0; i < 14; i++) {
     const card = page.locator('.sp-player-grid .sp-card').first();
     if ((await card.count()) === 0) break;
@@ -101,6 +120,15 @@ test('exports a roster and re-imports it after clearing', async ({ page }) => {
   const importInput = page.locator('input[type=file][accept="application/json"]');
   await importInput.setInputFiles(path as string);
   await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(14);
+
+  // The match history round-tripped too, and re-importing the same file a
+  // second time doesn't duplicate the entry.
+  await page.getByRole('tab', { name: 'History' }).click();
+  await expect(page.locator('.sp-panel')).toHaveCount(1);
+  await page.getByRole('tab', { name: 'Setup' }).click();
+  await importInput.setInputFiles(path as string);
+  await page.getByRole('tab', { name: 'History' }).click();
+  await expect(page.locator('.sp-panel')).toHaveCount(1);
 });
 
 test('copies a roster share link and a fresh session can open it', async ({ page, context }) => {

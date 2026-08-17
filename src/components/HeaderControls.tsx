@@ -42,11 +42,12 @@ export function HeaderControls() {
   }, []);
 
   async function handleExport() {
-    if (state.players.length === 0) {
-      announce('No players to export yet.', 'danger');
+    if (state.players.length === 0 && state.history.length === 0) {
+      announce('Nothing to export yet.', 'danger');
       return;
     }
-    await downloadRosterExport(state.players);
+    await downloadRosterExport(state.players, state.history);
+    announce(`Exported ${state.players.length} player(s) and ${state.history.length} match(es).`);
   }
 
   function handleImportClick() {
@@ -56,12 +57,16 @@ export function HeaderControls() {
   async function handleImportFile(file: File) {
     try {
       const text = await file.text();
-      const players = await parseRosterImportFile(text);
+      const { players, history } = await parseRosterImportFile(text);
       const replace = confirm(
-        `This file has ${players.length} player(s).\n\nOK to REPLACE your current roster, or Cancel to MERGE it into your existing one.`,
+        `This file has ${players.length} player(s) and ${history.length} match(es).\n\nOK to REPLACE your current roster and history, or Cancel to MERGE it into your existing data.`,
       );
-      dispatch({ type: 'MERGE_PLAYERS', players, mode: replace ? 'replace' : 'merge' });
-      announce(`Imported ${players.length} player(s) from file (${replace ? 'replaced' : 'merged'}).`);
+      const mode = replace ? 'replace' : 'merge';
+      dispatch({ type: 'MERGE_PLAYERS', players, mode });
+      dispatch({ type: 'MERGE_HISTORY', entries: history, mode });
+      announce(
+        `Imported ${players.length} player(s) and ${history.length} match(es) from file (${replace ? 'replaced' : 'merged'}).`,
+      );
     } catch (err) {
       announce(err instanceof Error ? err.message : 'Could not read that file.', 'danger');
     }

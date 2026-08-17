@@ -43,8 +43,8 @@ function AppShell() {
     <div className="sp-app">
       <header className="sp-header">
         <div className="sp-header__brand">
-          soccerPicker
-          <small>pickup team builder</small>
+          SquadRef
+          <small>Draft fair. Ref easy. Track everything.</small>
         </div>
         <Tabs
           tabs={TABS}

@@ -47,6 +47,7 @@ export type Action =
   | { type: 'SAVE_MATCH_TO_HISTORY'; entry: MatchHistoryEntry }
   | { type: 'DELETE_HISTORY_ENTRY'; id: string }
   | { type: 'SET_HISTORY_SCORE'; id: string; scoreA?: number; scoreB?: number }
+  | { type: 'MERGE_HISTORY'; entries: MatchHistoryEntry[]; mode: 'merge' | 'replace' }
   | { type: 'LOAD_STATE'; state: AppState }
   // Live-client only: wholesale-replaces match state from a host STATE
   // broadcast, without touching players (whose photos arrive separately
@@ -295,6 +296,23 @@ export function reduce(state: AppState, action: Action): AppState {
           h.id === action.id ? { ...h, scoreA: action.scoreA, scoreB: action.scoreB } : h,
         ),
       };
+
+    case 'MERGE_HISTORY': {
+      if (action.mode === 'replace') {
+        return { ...state, history: [...action.entries].sort((a, b) => b.date - a.date) };
+      }
+      // merge: incoming entries with a matching id replace the existing one
+      // (so re-importing the same export twice never duplicates); everything
+      // else is kept. Keyed by id, unlike MERGE_PLAYERS's name-based dedup —
+      // a MatchHistoryEntry.id has no cross-device human-typed-name collision
+      // concern the way a player's name does.
+      const byId = new Map(state.history.map((h) => [h.id, h]));
+      for (const incoming of action.entries) {
+        byId.set(incoming.id, incoming);
+      }
+      const history = Array.from(byId.values()).sort((a, b) => b.date - a.date);
+      return { ...state, history };
+    }
 
     case 'LOAD_STATE':
       return action.state;

@@ -1,4 +1,6 @@
-# soccerPicker
+# SquadRef
+
+**Draft fair. Ref easy. Track everything.**
 
 A player-card database and team picker for pickup soccer. Build a roster of
 your regulars with a handful of stats and a photo, run a guided draft with a
