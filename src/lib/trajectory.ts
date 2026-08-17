@@ -17,6 +17,9 @@ export interface TrajectoryGeometry {
   matchDots: ScaledPoint[];
   /** False only when both point sets are empty — renders an empty-state message instead. */
   hasData: boolean;
+  /** The padded y-domain actually used to scale every point — for axis tick labels. Both 0 when hasData is false. */
+  minOvr: number;
+  maxOvr: number;
 }
 
 const OVR_PADDING = 4;
@@ -39,7 +42,7 @@ export function buildTrajectoryGeometry(
   height: number,
 ): TrajectoryGeometry {
   const all = [...statPoints, ...matchPoints];
-  if (all.length === 0) return { linePoints: '', lineDots: [], matchDots: [], hasData: false };
+  if (all.length === 0) return { linePoints: '', lineDots: [], matchDots: [], hasData: false, minOvr: 0, maxOvr: 0 };
 
   let minAt = Math.min(...all.map((p) => p.at));
   let maxAt = Math.max(...all.map((p) => p.at));
@@ -64,5 +67,5 @@ export function buildTrajectoryGeometry(
   const matchDots = matchPoints.map(scale);
   const linePoints = statPoints.length >= 2 ? lineDots.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ') : '';
 
-  return { linePoints, lineDots, matchDots, hasData: true };
+  return { linePoints, lineDots, matchDots, hasData: true, minOvr, maxOvr };
 }

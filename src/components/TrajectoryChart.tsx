@@ -9,6 +9,12 @@ interface TrajectoryChartProps {
 const WIDTH = 320;
 const HEIGHT = 120;
 const PADDING = 12;
+// Wider than PADDING on the left so the two-digit OVR tick labels have room
+// without overlapping the y-axis line.
+const PADDING_LEFT = 22;
+// Taller than PADDING on top so the "OVR" axis title and the max-value tick
+// label sit on their own separate lines instead of overlapping each other.
+const PADDING_TOP = 22;
 
 /**
  * Inline SVG OVR-over-time line chart — mirrors RadarChart.tsx's hairline,
@@ -19,8 +25,8 @@ const PADDING = 12;
  * HistoryPlayerSnapshot.overall) — never interpolated onto the line.
  */
 export function TrajectoryChart({ statPoints, matchPoints }: TrajectoryChartProps) {
-  const innerWidth = WIDTH - PADDING * 2;
-  const innerHeight = HEIGHT - PADDING * 2;
+  const innerWidth = WIDTH - PADDING_LEFT - PADDING;
+  const innerHeight = HEIGHT - PADDING_TOP - PADDING;
   const geo = buildTrajectoryGeometry(statPoints, matchPoints, innerWidth, innerHeight);
 
   if (!geo.hasData) {
@@ -32,21 +38,40 @@ export function TrajectoryChart({ statPoints, matchPoints }: TrajectoryChartProp
   }
 
   return (
-    <svg className="sp-trajectory-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Overall rating over time">
-      <g transform={`translate(${PADDING} ${PADDING})`}>
-        <line x1={0} y1={innerHeight} x2={innerWidth} y2={innerHeight} stroke="var(--sp-line-faint)" strokeWidth="0.5" />
-        <line x1={0} y1={0} x2={0} y2={innerHeight} stroke="var(--sp-line-faint)" strokeWidth="0.5" />
-        {geo.linePoints && <polyline points={geo.linePoints} fill="none" stroke="var(--sp-accent)" strokeWidth="1.5" />}
-        {geo.lineDots.map((p, i) => (
-          <circle key={`line-${i}`} cx={p.x} cy={p.y} r={2.5} fill="var(--sp-accent)" />
-        ))}
-        {geo.matchDots.map((p, i) => (
-          <circle key={`match-${i}`} cx={p.x} cy={p.y} r={2} fill="var(--sp-bg)" stroke="var(--sp-muted)" strokeWidth="1" />
-        ))}
-        {geo.lineDots.length === 0 && geo.matchDots.length === 1 && (
-          <circle cx={geo.matchDots[0].x} cy={geo.matchDots[0].y} r={3} fill="var(--sp-accent)" />
-        )}
-      </g>
-    </svg>
+    <>
+      <svg className="sp-trajectory-chart" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Overall rating over time">
+        <text x={2} y={9} fontSize="9" fontWeight="700" fill="var(--sp-muted)">
+          OVR
+        </text>
+        <text x={PADDING_LEFT - 4} y={PADDING_TOP + 3} fontSize="9" textAnchor="end" fill="var(--sp-muted)">
+          {Math.round(geo.maxOvr)}
+        </text>
+        <text x={PADDING_LEFT - 4} y={PADDING_TOP + innerHeight} fontSize="9" textAnchor="end" fill="var(--sp-muted)">
+          {Math.round(geo.minOvr)}
+        </text>
+        <g transform={`translate(${PADDING_LEFT} ${PADDING_TOP})`}>
+          <line x1={0} y1={innerHeight} x2={innerWidth} y2={innerHeight} stroke="var(--sp-line-faint)" strokeWidth="0.5" />
+          <line x1={0} y1={0} x2={0} y2={innerHeight} stroke="var(--sp-line-faint)" strokeWidth="0.5" />
+          {geo.linePoints && <polyline points={geo.linePoints} fill="none" stroke="var(--sp-accent)" strokeWidth="1.5" />}
+          {geo.lineDots.map((p, i) => (
+            <circle key={`line-${i}`} cx={p.x} cy={p.y} r={2.5} fill="var(--sp-accent)" />
+          ))}
+          {geo.matchDots.map((p, i) => (
+            <circle key={`match-${i}`} cx={p.x} cy={p.y} r={2} fill="var(--sp-bg)" stroke="var(--sp-muted)" strokeWidth="1" />
+          ))}
+          {geo.lineDots.length === 0 && geo.matchDots.length === 1 && (
+            <circle cx={geo.matchDots[0].x} cy={geo.matchDots[0].y} r={3} fill="var(--sp-accent)" />
+          )}
+        </g>
+      </svg>
+      <ul className="sp-trajectory-chart__legend">
+        <li>
+          <span className="sp-trajectory-chart__dot sp-trajectory-chart__dot--history" /> Rating change
+        </li>
+        <li>
+          <span className="sp-trajectory-chart__dot sp-trajectory-chart__dot--match" /> Match played
+        </li>
+      </ul>
+    </>
   );
 }

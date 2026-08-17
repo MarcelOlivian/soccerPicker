@@ -11,6 +11,23 @@ describe('buildTrajectoryGeometry', () => {
     expect(geo.linePoints).toBe('');
     expect(geo.lineDots).toEqual([]);
     expect(geo.matchDots).toEqual([]);
+    expect(geo.minOvr).toBe(0);
+    expect(geo.maxOvr).toBe(0);
+  });
+
+  it('returns the padded y-domain actually used to scale the points', () => {
+    const geo = buildTrajectoryGeometry(
+      [
+        { at: 1000, ovr: 60 },
+        { at: 2000, ovr: 70 },
+      ],
+      [{ at: 3000, ovr: 65 }],
+      W,
+      H,
+    );
+    // OVR_PADDING is 4: min 60 - 4 = 56, max 70 + 4 = 74.
+    expect(geo.minOvr).toBe(56);
+    expect(geo.maxOvr).toBe(74);
   });
 
   it('a single statPoint has hasData true, an empty linePoints, but one lineDot', () => {
