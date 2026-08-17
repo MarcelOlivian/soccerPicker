@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { EXPECTED_CSV_HEADER, parsePlayerCsv } from '../lib/csvImport';
 import { downloadRosterExport, parseRosterImportFile } from '../lib/exportImport';
 import { buildShareLink, parseShareLink } from '../lib/shareLink';
 import { useAppState } from '../state/AppContext';
@@ -11,8 +12,10 @@ import { useAppState } from '../state/AppContext';
 export function HeaderControls() {
   const { state, dispatch } = useAppState();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
+  const [showImportMenu, setShowImportMenu] = useState(false);
   const handledIncomingLink = useRef(false);
 
   function announce(message: string, kind: 'info' | 'danger' = 'info') {
@@ -50,8 +53,14 @@ export function HeaderControls() {
     announce(`Exported ${state.players.length} player(s) and ${state.history.length} match(es).`);
   }
 
-  function handleImportClick() {
+  function openJsonPicker() {
+    setShowImportMenu(false);
     fileInputRef.current?.click();
+  }
+
+  function openCsvPicker() {
+    setShowImportMenu(false);
+    csvInputRef.current?.click();
   }
 
   async function handleImportFile(file: File) {
@@ -69,6 +78,24 @@ export function HeaderControls() {
       );
     } catch (err) {
       announce(err instanceof Error ? err.message : 'Could not read that file.', 'danger');
+    }
+  }
+
+  async function handleImportCsvFile(file: File) {
+    try {
+      const text = await file.text();
+      const players = parsePlayerCsv(text);
+      if (players.length === 0) {
+        announce('That CSV has no player rows to import.', 'danger');
+        return;
+      }
+      const replace = confirm(
+        `This CSV has ${players.length} player(s).\n\nOK to REPLACE your current roster, or Cancel to MERGE it into your existing one.`,
+      );
+      dispatch({ type: 'MERGE_PLAYERS', players, mode: replace ? 'replace' : 'merge' });
+      announce(`Imported ${players.length} player(s) from CSV (${replace ? 'replaced' : 'merged'}).`);
+    } catch (err) {
+      announce(err instanceof Error ? err.message : 'Could not read that CSV file.', 'danger');
     }
   }
 
@@ -106,9 +133,31 @@ export function HeaderControls() {
       <button type="button" className="sp-btn sp-btn--sm" onClick={handleExport}>
         Export
       </button>
-      <button type="button" className="sp-btn sp-btn--sm" onClick={handleImportClick}>
+      <button type="button" className="sp-btn sp-btn--sm" onClick={() => setShowImportMenu(true)}>
         Import
       </button>
+      {showImportMenu && (
+        <div className="sp-modal-backdrop" onClick={() => setShowImportMenu(false)}>
+          <div className="sp-modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Import">
+            <p className="sp-modal-panel__title">Import</p>
+            <div className="sp-modal-panel__actions">
+              <button type="button" className="sp-btn" onClick={openJsonPicker}>
+                Import roster (JSON)
+              </button>
+              <button type="button" className="sp-btn" onClick={openCsvPicker}>
+                Import stats sheet (CSV)
+              </button>
+              <p className="sp-hint">CSV header: {EXPECTED_CSV_HEADER}</p>
+              <p className="sp-hint">
+                Scores are on a 1–5 scale. OVR is calculated automatically and Observations aren't imported.
+              </p>
+              <button type="button" className="sp-btn sp-btn--ghost" onClick={() => setShowImportMenu(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <input
         ref={fileInputRef}
         type="file"
@@ -117,6 +166,17 @@ export function HeaderControls() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) handleImportFile(file);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={csvInputRef}
+        type="file"
+        accept=".csv,text/csv,text/comma-separated-values,application/vnd.ms-excel"
+        className="sp-visually-hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImportCsvFile(file);
           e.target.value = '';
         }}
       />
