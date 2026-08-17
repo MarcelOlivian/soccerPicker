@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { suggestStatChange } from '../src/lib/statSuggestion';
-import type { HistoryPlayerSnapshot, MatchHistoryEntry, Player, PlayerStats, Position } from '../src/types';
+import type { HistoryPlayerSnapshot, MatchHistoryEntry, Player, PlayerStats, Position, StatHistoryEntry } from '../src/types';
 
 function makeStats(overrides: Partial<PlayerStats> = {}): PlayerStats {
   return { pace: 3, shooting: 3, passing: 3, dribbling: 3, defending: 3, physicality: 3, ...overrides };
@@ -176,5 +176,48 @@ describe('suggestStatChange — ranking across positions', () => {
   it('returns null when nothing qualifies anywhere', () => {
     const player = makePlayer('p1', makeStats());
     expect(suggestStatChange(player, [])).toBeNull();
+  });
+});
+
+describe('suggestStatChange — statHistory cutoff', () => {
+  it('does not re-suggest using appearances that all predate the most recent statHistory entry', () => {
+    const statHistory: StatHistoryEntry[] = [{ at: 1000, stats: makeStats({ defending: 4 }), source: 'suggestion' }];
+    const player: Player = { ...makePlayer('p1', makeStats({ defending: 4 })), statHistory };
+    // Same stale evidence that justified the accepted downgrade — all dated before the cutoff.
+    const history = makeMatches('p1', 5, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, date: i })); // dates 0..4, all < 1000
+    expect(suggestStatChange(player, history)).toBeNull();
+  });
+
+  it('a player with no statHistory still gets suggestions from full history (unchanged behavior)', () => {
+    const player = makePlayer('p1', makeStats({ defending: 4 })); // no statHistory field at all
+    const history = makeMatches('p1', 5, 'GK', { saves: 0, concedes: 3 });
+    expect(suggestStatChange(player, history)).toMatchObject({ statKey: 'defending', direction: 'down' });
+  });
+
+  it("a legacy statsVerifiedAt-only player (no statHistory array) is also treated as having a cutoff, via effectiveStatHistory's fallback", () => {
+    const player: Player = {
+      ...makePlayer('p1', makeStats({ defending: 4 })),
+      statsVerifiedBy: ['Alice'],
+      statsVerifiedAt: 1000,
+    };
+    const history = makeMatches('p1', 5, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, date: i })); // all < 1000
+    expect(suggestStatChange(player, history)).toBeNull();
+  });
+
+  it('appearances after the cutoff count, but need to independently hit MIN_SAMPLE — old pre-cutoff appearances do not partially carry over', () => {
+    const statHistory: StatHistoryEntry[] = [{ at: 1000, stats: makeStats({ defending: 4 }), source: 'suggestion' }];
+    const player: Player = { ...makePlayer('p1', makeStats({ defending: 4 })), statHistory };
+    const stale = makeMatches('p1', 5, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, date: i })); // 0..4, pre-cutoff
+    const fresh = makeMatches('p1', 2, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, id: `fresh${i}`, date: 2000 + i })); // only 2 post-cutoff
+    expect(suggestStatChange(player, [...stale, ...fresh])).toBeNull(); // 2 < MIN_SAMPLE(3), stale ones don't count at all
+  });
+
+  it('exactly MIN_SAMPLE fresh post-cutoff appearances re-triggers a suggestion, sized only to those', () => {
+    const statHistory: StatHistoryEntry[] = [{ at: 1000, stats: makeStats({ defending: 4 }), source: 'suggestion' }];
+    const player: Player = { ...makePlayer('p1', makeStats({ defending: 4 })), statHistory };
+    const stale = makeMatches('p1', 5, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, date: i }));
+    const fresh = makeMatches('p1', 3, 'GK', { saves: 0, concedes: 3 }).map((e, i) => ({ ...e, id: `fresh${i}`, date: 2000 + i }));
+    const suggestion = suggestStatChange(player, [...stale, ...fresh]);
+    expect(suggestion).toMatchObject({ statKey: 'defending', direction: 'down', sampleSize: 3 });
   });
 });

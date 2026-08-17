@@ -1,5 +1,6 @@
 import { appearancesAtPosition, matchResult, matchesForPlayer } from './playerMatchLog';
 import type { PlayerMatchAppearance } from './playerMatchLog';
+import { effectiveStatHistory } from './statHistory';
 import type { MatchHistoryEntry, Player, Position, StatKey, StatValue } from '../types';
 
 const WINDOW = 5;
@@ -188,9 +189,20 @@ function evalGk(appearances: PlayerMatchAppearance[], defending: StatValue): Can
  * past its threshold the qualifying signal is. `reasonText` is a lowercase
  * fragment ("averaging 1.6 goals/match...") — prepend a subject ("Marcus is
  * ") at render time; kept out of this pure function so it stays name-free.
+ *
+ * Appearances that predate the player's most recent recorded stat change
+ * (vote, manual edit, or an accepted suggestion — effectiveStatHistory's
+ * last entry) are excluded outright, not partially weighted: once a
+ * referee has acted on a signal, a fresh suggestion needs fresh evidence,
+ * not the same appearances that already justified the last change. This is
+ * what stops an accepted downgrade from immediately re-suggesting another
+ * downgrade off the same stale matches.
  */
 export function suggestStatChange(player: Player, history: MatchHistoryEntry[]): SuggestedChange | null {
-  const appearances = matchesForPlayer(history, player.id);
+  const statEntries = effectiveStatHistory(player); // oldest-first
+  const lastChangeAt = statEntries.length > 0 ? statEntries[statEntries.length - 1].at : undefined;
+  const allAppearances = matchesForPlayer(history, player.id);
+  const appearances = lastChangeAt === undefined ? allAppearances : allAppearances.filter((a) => a.entry.date > lastChangeAt);
   const byPos = (pos: Position) => appearancesAtPosition(appearances, pos, WINDOW);
 
   const candidates = [

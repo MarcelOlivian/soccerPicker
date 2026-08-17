@@ -1592,11 +1592,13 @@
   padding: var(--sp-space-4);
 }
 
-.sp-trajectory-chart {
-  width: 100%;
-  height: auto;
-  display: block;
+.sp-trajectory-chart__scroll {
+  overflow-x: auto;
   margin: var(--sp-space-2) 0;
+}
+
+.sp-trajectory-chart {
+  display: block;
 }
 
 .sp-trajectory-chart__legend {
