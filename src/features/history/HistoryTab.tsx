@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FORMATION_LABELS } from '../../lib/formations';
-import { buildEventFeed } from '../../lib/matchEvents';
+import { buildEventFeed, formatEventFeedForShare, formatMatchSummaryForShare } from '../../lib/matchEvents';
+import type { SummaryPlayerLine } from '../../lib/matchEvents';
 import { useAppState } from '../../state/AppContext';
 import type { HistoryPlayerSnapshot, MatchHistoryEntry, Team } from '../../types';
 import { EventFeed } from '../match/EventFeed';
@@ -48,6 +49,8 @@ function HistoryEntryPanel({
   const hasScore = entry.scoreA !== undefined && entry.scoreB !== undefined;
   const [scoreA, setScoreA] = useState('');
   const [scoreB, setScoreB] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
 
   // entry.events is optional — absent on any match saved before this field
   // existed, so this must fall back to [] rather than crash.
@@ -57,6 +60,48 @@ function HistoryEntryPanel({
     (id) => nameLookup.get(id) ?? 'Unknown',
     (team) => (team === 'A' ? entry.teamAName : entry.teamBName),
   );
+
+  function toSummaryLine(p: HistoryPlayerSnapshot): SummaryPlayerLine {
+    return {
+      name: p.name,
+      goals: p.goals ?? 0,
+      assists: p.assists ?? 0,
+      fouls: p.fouls ?? 0,
+      saves: p.saves ?? 0,
+      concedes: p.concedes ?? 0,
+    };
+  }
+
+  async function handleCopySummary() {
+    if (!hasScore) return;
+    const text = formatMatchSummaryForShare(
+      entry.teamAName,
+      entry.scoreA!,
+      entry.teamAPlayers.map(toSummaryLine),
+      entry.teamBName,
+      entry.scoreB!,
+      entry.teamBPlayers.map(toSummaryLine),
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setNoticeKind('info');
+      setNotice('Match summary copied to clipboard.');
+    } catch {
+      setNoticeKind('danger');
+      setNotice('Could not access the clipboard.');
+    }
+  }
+
+  async function handleCopyEventLog() {
+    try {
+      await navigator.clipboard.writeText(formatEventFeedForShare(eventFeed));
+      setNoticeKind('info');
+      setNotice('Event log copied to clipboard.');
+    } catch {
+      setNoticeKind('danger');
+      setNotice('Could not access the clipboard.');
+    }
+  }
 
   function handleSaveScore() {
     const a = Number(scoreA);
@@ -118,6 +163,27 @@ function HistoryEntryPanel({
         <HistoryTeamColumn team="B" name={entry.teamBName} players={entry.teamBPlayers} />
       </div>
       <EventFeed entries={eventFeed} />
+      <div className="sp-history-entry__actions">
+        <button type="button" className="sp-btn sp-btn--ghost sp-btn--sm" disabled={!hasScore} onClick={handleCopySummary}>
+          Copy summary
+        </button>
+        <button
+          type="button"
+          className="sp-btn sp-btn--ghost sp-btn--sm"
+          disabled={eventFeed.length === 0}
+          onClick={handleCopyEventLog}
+        >
+          Copy event log
+        </button>
+        {notice && (
+          <span className={`sp-header-notice ${noticeKind === 'danger' ? 'sp-header-notice--danger' : ''}`}>
+            {notice}
+            <button type="button" className="sp-header-notice__close" onClick={() => setNotice(null)} aria-label="Dismiss">
+              ×
+            </button>
+          </span>
+        )}
+      </div>
     </div>
   );
 }

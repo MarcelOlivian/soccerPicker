@@ -103,6 +103,7 @@ export async function parseShareLink(hash: string): Promise<Player[] | null> {
       taunt: p.taunt,
       statsVerifiedBy: p.statsVerifiedBy,
       statsVerifiedAt: p.statsVerifiedAt,
+      statHistory: p.statHistory,
       createdAt: p.createdAt ?? Date.now(),
     }));
   } catch {

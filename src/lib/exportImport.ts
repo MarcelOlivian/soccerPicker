@@ -93,6 +93,7 @@ export async function parseRosterImportFile(
       taunt: rest.taunt,
       statsVerifiedBy: rest.statsVerifiedBy,
       statsVerifiedAt: rest.statsVerifiedAt,
+      statHistory: rest.statHistory,
       createdAt: rest.createdAt ?? Date.now(),
     });
   }

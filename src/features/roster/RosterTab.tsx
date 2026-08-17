@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deleteImage } from '../../lib/imageStore';
 import { demoRoster } from '../../lib/demoRoster';
+import { appendStatHistoryEntry, inferStatChangeSource } from '../../lib/statHistory';
 import { useAppState } from '../../state/AppContext';
 import type { Player } from '../../types';
 import { PlayerForm } from './PlayerForm';
@@ -13,7 +14,9 @@ export function RosterTab() {
   const [formTarget, setFormTarget] = useState<FormTarget>(null);
 
   function handleSave(player: Player) {
-    dispatch({ type: formTarget === 'new' ? 'ADD_PLAYER' : 'UPDATE_PLAYER', player });
+    const previous = formTarget === 'new' ? undefined : state.players.find((p) => p.id === player.id);
+    const enriched = appendStatHistoryEntry(previous, player, inferStatChangeSource(previous, player));
+    dispatch({ type: formTarget === 'new' ? 'ADD_PLAYER' : 'UPDATE_PLAYER', player: enriched });
     setFormTarget(null);
   }
 
@@ -26,9 +29,11 @@ export function RosterTab() {
       id: crypto.randomUUID(),
       name: `${player.name} (copy)`,
       photoKey: undefined,
-      // The copy hasn't itself been through a vote, even if the original had.
+      // The copy hasn't itself been through a vote, edit, or suggestion —
+      // even if the original had.
       statsVerifiedBy: undefined,
       statsVerifiedAt: undefined,
+      statHistory: undefined,
       createdAt: Date.now(),
     };
     dispatch({ type: 'DUPLICATE_PLAYER', id: player.id, newPlayer });
