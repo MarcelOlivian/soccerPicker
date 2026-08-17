@@ -84,6 +84,48 @@ describe('reducer: placement team guard', () => {
   });
 });
 
+describe('reducer: SWAP_PLACEMENTS position-change event logging', () => {
+  // Default formation '6' real slot ids: A-GK-0, A-DEF-1, A-DEF-2, A-MID-3, A-MID-4, A-ATT-5.
+  it('produces no events for a cross-position swap before trackingStarted', () => {
+    let state = stateWithDraftedTeams();
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-GK-0', playerId: 'a1' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-DEF-1', playerId: 'a2' });
+    const next = reduce(state, { type: 'SWAP_PLACEMENTS', slotA: 'A-GK-0', slotB: 'A-DEF-1' });
+    expect(next.match.trackingStarted).toBe(false);
+    expect(next.match.events).toEqual([]);
+  });
+
+  it('produces no events for a same-position swap even after trackingStarted', () => {
+    let state = stateWithDraftedTeams();
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-DEF-1', playerId: 'a1' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-DEF-2', playerId: 'a2' });
+    const next = reduce(state, { type: 'SWAP_PLACEMENTS', slotA: 'A-DEF-1', slotB: 'A-DEF-2' });
+    expect(next.match.events).toEqual([]);
+  });
+
+  it('appends two mirrored POSITION_CHANGE events for a cross-position swap after trackingStarted', () => {
+    let state = stateWithDraftedTeams();
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-GK-0', playerId: 'a1' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-DEF-1', playerId: 'a2' });
+    const next = reduce(state, { type: 'SWAP_PLACEMENTS', slotA: 'A-GK-0', slotB: 'A-DEF-1' });
+    expect(next.match.events).toHaveLength(2);
+    expect(next.match.events).toEqual([
+      expect.objectContaining({ type: 'POSITION_CHANGE', playerId: 'a1', fromPosition: 'GK', toPosition: 'DEF' }),
+      expect.objectContaining({ type: 'POSITION_CHANGE', playerId: 'a2', fromPosition: 'DEF', toPosition: 'GK' }),
+    ]);
+  });
+
+  it('produces no events when one of the swapped slots is empty, even after trackingStarted', () => {
+    let state = stateWithDraftedTeams();
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'SET_PLACEMENT', slotId: 'A-GK-0', playerId: 'a1' });
+    const next = reduce(state, { type: 'SWAP_PLACEMENTS', slotA: 'A-GK-0', slotB: 'A-DEF-1' });
+    expect(next.match.events).toEqual([]);
+  });
+});
+
 function makeHistoryEntry(id: string, date = 1700000000000): MatchHistoryEntry {
   return {
     id,
@@ -213,6 +255,10 @@ function goalEvent(playerId: string): MatchEvent {
   return { id: `${playerId}-goal`, atMs: 0, type: 'GOAL', playerId, team: 'A', isOwnGoal: false };
 }
 
+function positionChangeEvent(playerId: string): MatchEvent {
+  return { id: `${playerId}-poschange-${Math.random()}`, atMs: 0, type: 'POSITION_CHANGE', playerId, fromPosition: 'DEF', toPosition: 'GK' };
+}
+
 describe('reducer: match-tracking clock actions', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -222,6 +268,16 @@ describe('reducer: match-tracking clock actions', () => {
     let state = defaultState();
     state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
     expect(state.match.boardMode).toBe('tracking');
+  });
+
+  it('SET_BOARD_MODE sets trackingStarted sticky-true once tracking is entered, and it stays true after toggling back', () => {
+    let state = defaultState();
+    expect(state.match.trackingStarted).toBe(false);
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    expect(state.match.trackingStarted).toBe(true);
+    state = reduce(state, { type: 'SET_BOARD_MODE', mode: 'setup' });
+    expect(state.match.boardMode).toBe('setup');
+    expect(state.match.trackingStarted).toBe(true);
   });
 
   it('START_CLOCK from never-started sets startedAt and clears pausedMs', () => {
@@ -296,6 +352,32 @@ describe('reducer: match-tracking event actions', () => {
   it('UNDO_LAST_EVENT on an empty event log is a no-op', () => {
     const state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
     expect(reduce(state, { type: 'UNDO_LAST_EVENT' })).toBe(state);
+  });
+
+  it('UNDO_LAST_EVENT skips trailing POSITION_CHANGE entries and removes the real event underneath', () => {
+    let state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    state = reduce(state, { type: 'RECORD_EVENT', event: positionChangeEvent('p2') });
+    state = reduce(state, { type: 'RECORD_EVENT', event: positionChangeEvent('p3') });
+    const next = reduce(state, { type: 'UNDO_LAST_EVENT' });
+    expect(next.match.events.map((e) => e.type)).toEqual(['POSITION_CHANGE', 'POSITION_CHANGE']);
+  });
+
+  it('UNDO_LAST_EVENT is a no-op when the log is only POSITION_CHANGE entries', () => {
+    let state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'RECORD_EVENT', event: positionChangeEvent('p1') });
+    expect(reduce(state, { type: 'UNDO_LAST_EVENT' })).toBe(state);
+  });
+
+  it('two sequential undos walk back past a swap pair to the next real event underneath', () => {
+    let state = reduce(defaultState(), { type: 'SET_BOARD_MODE', mode: 'tracking' });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p1') });
+    state = reduce(state, { type: 'RECORD_EVENT', event: goalEvent('p2') });
+    state = reduce(state, { type: 'RECORD_EVENT', event: positionChangeEvent('p3') });
+    state = reduce(state, { type: 'UNDO_LAST_EVENT' });
+    expect(state.match.events.map((e) => e.type)).toEqual(['GOAL', 'POSITION_CHANGE']);
+    state = reduce(state, { type: 'UNDO_LAST_EVENT' });
+    expect(state.match.events.map((e) => e.type)).toEqual(['POSITION_CHANGE']);
   });
 
   it('FINISH_MATCH freezes a running clock and locks the board', () => {

@@ -2,7 +2,8 @@ import { autoFillSlots } from '../lib/autoFill';
 import { applyPick, autoDraftRemaining, otherTeam, picksForTeam, resetDraft, undoPick } from '../lib/draft';
 import { formationSlots } from '../lib/formations';
 import { pruneMatchToPlayers } from '../lib/matchCleanup';
-import { emptyClock } from '../lib/matchClock';
+import { computeElapsedMs, emptyClock } from '../lib/matchClock';
+import { findLastUndoableEvent } from '../lib/matchEvents';
 import type {
   AppState,
   DraftOrder,
@@ -229,7 +230,25 @@ export function reduce(state: AppState, action: Action): AppState {
       else placements[action.slotA] = b;
       if (a === null) delete placements[action.slotB];
       else placements[action.slotB] = a;
-      return { ...state, match: { ...state.match, placements } };
+
+      // Only log a position-change event once the referee has genuinely
+      // started tracking (not for a pre-match arrangement), and only when
+      // the swap crosses a position type (GK<->DEF, not DEF<->DEF).
+      let events = state.match.events;
+      if (state.match.trackingStarted && a !== null && b !== null) {
+        const slots = formationSlots(state.match.formation);
+        const posA = slots.find((s) => s.id === action.slotA)?.position;
+        const posB = slots.find((s) => s.id === action.slotB)?.position;
+        if (posA && posB && posA !== posB) {
+          const atMs = computeElapsedMs(state.match.clock);
+          events = [
+            ...events,
+            { id: crypto.randomUUID(), atMs, type: 'POSITION_CHANGE', playerId: a, fromPosition: posA, toPosition: posB },
+            { id: crypto.randomUUID(), atMs, type: 'POSITION_CHANGE', playerId: b, fromPosition: posB, toPosition: posA },
+          ];
+        }
+      }
+      return { ...state, match: { ...state.match, placements, events } };
     }
 
     case 'CLEAR_PLACEMENTS':
@@ -238,8 +257,10 @@ export function reduce(state: AppState, action: Action): AppState {
     case 'RESET_MATCH':
       return { ...state, match: emptyMatch(state.match.formation) };
 
-    case 'SET_BOARD_MODE':
-      return { ...state, match: { ...state.match, boardMode: action.mode } };
+    case 'SET_BOARD_MODE': {
+      const trackingStarted = state.match.trackingStarted || action.mode === 'tracking';
+      return { ...state, match: { ...state.match, boardMode: action.mode, trackingStarted } };
+    }
 
     case 'START_CLOCK': {
       const clock = state.match.clock;
@@ -270,10 +291,13 @@ export function reduce(state: AppState, action: Action): AppState {
       if (state.match.boardMode !== 'tracking') return state;
       return { ...state, match: { ...state.match, events: [...state.match.events, action.event] } };
 
-    case 'UNDO_LAST_EVENT':
-      return state.match.events.length === 0
-        ? state
-        : { ...state, match: { ...state.match, events: state.match.events.slice(0, -1) } };
+    case 'UNDO_LAST_EVENT': {
+      // POSITION_CHANGE entries are permanent log history — never undoable
+      // via this button (a mistaken swap is corrected by another swap).
+      const target = findLastUndoableEvent(state.match.events);
+      if (!target) return state;
+      return { ...state, match: { ...state.match, events: state.match.events.filter((e) => e !== target) } };
+    }
 
     case 'FINISH_MATCH': {
       const clock = state.match.clock;

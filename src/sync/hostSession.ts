@@ -15,7 +15,7 @@ import type { SyncTransport } from './transport';
  * untouched; only what goes over the wire is affected.
  */
 function forSync(match: MatchState): MatchState {
-  return { ...match, boardMode: 'setup', clock: emptyClock(), events: [] };
+  return { ...match, boardMode: 'setup', clock: emptyClock(), events: [], trackingStarted: false };
 }
 
 function slotTeamFromId(slotId: string): Team | undefined {

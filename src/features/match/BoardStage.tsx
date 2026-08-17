@@ -7,16 +7,24 @@ import { TeamColumn } from '../../components/TeamColumn';
 import type { TeamAssignment } from '../../lib/balance';
 import { computeBalance, teamStrength } from '../../lib/balance';
 import { otherTeam, picksForTeam, teamShortName } from '../../lib/draft';
-import { formationSlots } from '../../lib/formations';
+import { findSlot, formationSlots } from '../../lib/formations';
 import { snapshotPlayer } from '../../lib/history';
 import { computeElapsedMs, formatClock, isClockRunning } from '../../lib/matchClock';
-import { buildEventFeed, describeEvent, formatMatchSummaryForShare, tallyMatchStats, tallyTeamScore } from '../../lib/matchEvents';
+import {
+  buildEventFeed,
+  describeEvent,
+  findLastUndoableEvent,
+  formatMatchSummaryForShare,
+  tallyMatchStats,
+  tallyTeamScore,
+} from '../../lib/matchEvents';
 import { useCoarsePointer, usePortraitPitch } from '../../lib/useMediaQuery';
 import { useAppState } from '../../state/AppContext';
 import { useLive } from '../../state/LiveContext';
-import type { MatchEvent, Player, Position, Team } from '../../types';
+import type { FoulType, MatchEvent, Player, Position, RestartType, Team } from '../../types';
 import { EventFeed } from './EventFeed';
 import { EventMenu } from './EventMenu';
+import { TeamEventMenu } from './TeamEventMenu';
 
 interface BoardStageProps {
   onStartNewMatch: () => void;
@@ -55,6 +63,7 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
   // event-menu flow either — see the coarsePointer prop passed below.
   const coarsePointer = useCoarsePointer();
   const [eventTarget, setEventTarget] = useState<{ playerId: string; team: Team } | null>(null);
+  const [showTeamEventMenu, setShowTeamEventMenu] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
 
@@ -221,6 +230,11 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     dispatch({ type: 'AUTO_FILL_PLACEMENTS' });
   }
 
+  function gkOf(team: Team): string | undefined {
+    const slot = findSlot(match.formation, team, 'GK');
+    return slot ? match.placements[slot.id] ?? undefined : undefined;
+  }
+
   function handleRecordGoal(isOwnGoal: boolean, assistPlayerId: string | null) {
     if (!eventTarget) return;
     const atMs = computeElapsedMs(match.clock);
@@ -239,16 +253,55 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
         event: { id: crypto.randomUUID(), atMs, type: 'ASSIST', playerId: assistPlayerId, goalEventId: goalEvent.id },
       });
     }
+    // Conceding team = whichever team is NOT credited on the scoreboard —
+    // goalEvent.team already accounts for own goals, so this is uniform.
+    const concedingGkId = gkOf(otherTeam(goalEvent.team));
+    if (concedingGkId) {
+      dispatch({
+        type: 'RECORD_EVENT',
+        event: { id: crypto.randomUUID(), atMs, type: 'GK_CONCEDED', playerId: concedingGkId, goalEventId: goalEvent.id },
+      });
+    }
     setEventTarget(null);
   }
 
-  function handleRecordFoul() {
+  function handleRecordFoul(foulType: FoulType, restart: RestartType) {
     if (!eventTarget) return;
     dispatch({
       type: 'RECORD_EVENT',
-      event: { id: crypto.randomUUID(), atMs: computeElapsedMs(match.clock), type: 'FOUL', playerId: eventTarget.playerId },
+      event: {
+        id: crypto.randomUUID(),
+        atMs: computeElapsedMs(match.clock),
+        type: 'FOUL',
+        playerId: eventTarget.playerId,
+        foulType,
+        restart,
+      },
     });
     setEventTarget(null);
+  }
+
+  function handleRecordSave(shooterId: string | null) {
+    if (!eventTarget) return;
+    dispatch({
+      type: 'RECORD_EVENT',
+      event: {
+        id: crypto.randomUUID(),
+        atMs: computeElapsedMs(match.clock),
+        type: 'SAVE_GK',
+        playerId: eventTarget.playerId,
+        shooterId: shooterId ?? undefined,
+      },
+    });
+    setEventTarget(null);
+  }
+
+  function handleRecordTeamEvent(type: 'CORNER' | 'THROW_IN', team: Team) {
+    dispatch({
+      type: 'RECORD_EVENT',
+      event: { id: crypto.randomUUID(), atMs: computeElapsedMs(match.clock), type, team },
+    });
+    setShowTeamEventMenu(false);
   }
 
   function handleSaveToHistory() {
@@ -269,6 +322,8 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           t?.goals,
           t?.assists,
           t?.fouls,
+          t?.saves,
+          t?.concedes,
         );
       }),
       teamBPlayers: teamBPlayers.map((p) => {
@@ -280,12 +335,15 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           t?.goals,
           t?.assists,
           t?.fouls,
+          t?.saves,
+          t?.concedes,
         );
       }),
       strengthA,
       strengthB,
       scoreA,
       scoreB,
+      events: match.events,
     };
     dispatch({ type: 'SAVE_MATCH_TO_HISTORY', entry });
     onNavigateToHistory();
@@ -296,7 +354,14 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     const tallies = tallyMatchStats(match.events);
     const summaryLine = (p: Player) => {
       const t = tallies.get(p.id);
-      return { name: p.name, goals: t?.goals ?? 0, assists: t?.assists ?? 0, fouls: t?.fouls ?? 0 };
+      return {
+        name: p.name,
+        goals: t?.goals ?? 0,
+        assists: t?.assists ?? 0,
+        fouls: t?.fouls ?? 0,
+        saves: t?.saves ?? 0,
+        concedes: t?.concedes ?? 0,
+      };
     };
     const text = formatMatchSummaryForShare(
       teamAName,
@@ -339,10 +404,9 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
 
   const { scoreA, scoreB } = tallyTeamScore(match.events);
   const eventTallies = tallyMatchStats(match.events);
-  const lastEvent = match.events.at(-1);
-  const lastEventPlayerId = lastEvent && 'playerId' in lastEvent ? lastEvent.playerId : undefined;
+  const lastEvent = findLastUndoableEvent(match.events);
   const lastEventLabel = lastEvent
-    ? describeEvent(lastEvent, (lastEventPlayerId && byId.get(lastEventPlayerId)?.name) || 'Unknown')
+    ? describeEvent(lastEvent, (id) => byId.get(id)?.name ?? 'Unknown', (team) => (team === 'A' ? teamAName : teamBName))
     : null;
   const eventFeed = buildEventFeed(
     match.events,
@@ -398,10 +462,13 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
               <button
                 type="button"
                 className="sp-btn sp-btn--sm sp-btn--ghost"
-                disabled={match.events.length === 0}
+                disabled={!lastEvent}
                 onClick={() => dispatch({ type: 'UNDO_LAST_EVENT' })}
               >
                 Undo last{lastEventLabel ? `: ${lastEventLabel}` : ''}
+              </button>
+              <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={() => setShowTeamEventMenu(true)}>
+                + Team event
               </button>
               <button
                 type="button"
@@ -446,7 +513,9 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
                             {' '}
                             {t.goals > 0 && `${t.goals}G `}
                             {t.assists > 0 && `${t.assists}A `}
-                            {t.fouls > 0 && `${t.fouls}F`}
+                            {t.fouls > 0 && `${t.fouls}F `}
+                            {t.saves > 0 && `${t.saves}SV `}
+                            {t.concedes > 0 && `${t.concedes}CN`}
                           </span>
                         )}
                       </li>
@@ -589,9 +658,22 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           teammates={(eventTarget.team === 'A' ? teamAPlayers : teamBPlayers).filter(
             (p) => p.id !== eventTarget.playerId && slotPositionByPlayer.has(p.id),
           )}
+          isGoalkeeper={slotPositionByPlayer.get(eventTarget.playerId) === 'GK'}
+          opposingOnPitch={(eventTarget.team === 'A' ? teamBPlayers : teamAPlayers).filter(
+            (p) => slotPositionByPlayer.has(p.id) && slotPositionByPlayer.get(p.id) !== 'GK',
+          )}
           onRecordGoal={handleRecordGoal}
           onRecordFoul={handleRecordFoul}
+          onRecordSave={handleRecordSave}
           onCancel={() => setEventTarget(null)}
+        />
+      )}
+      {showTeamEventMenu && !isClient && (
+        <TeamEventMenu
+          teamAName={teamAName}
+          teamBName={teamBName}
+          onRecord={handleRecordTeamEvent}
+          onCancel={() => setShowTeamEventMenu(false)}
         />
       )}
     </div>

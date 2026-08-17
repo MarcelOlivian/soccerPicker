@@ -34,6 +34,7 @@ describe('storage', () => {
         boardMode: 'setup',
         clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
         events: [],
+        trackingStarted: false,
       },
       history: [
         {

@@ -48,6 +48,7 @@ describe('clientSession', () => {
       boardMode: 'setup',
       clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
       events: [],
+      trackingStarted: false,
     };
     hostT.send({ type: 'HELLO', players: [makePlayer('p1')], match, youAre: 'B' });
     await flush();
@@ -85,6 +86,7 @@ describe('clientSession', () => {
       boardMode: 'setup',
       clock: { startedAt: null, pausedAt: null, pausedMs: 0 },
       events: [],
+      trackingStarted: false,
     };
     hostT.send({ type: 'STATE', match: newMatch });
     await flush();
