@@ -54,10 +54,20 @@ export function TrajectoryChart({ statPoints, matchPoints }: TrajectoryChartProp
           <line x1={0} y1={0} x2={0} y2={innerHeight} stroke="var(--sp-line-faint)" strokeWidth="0.5" />
           {geo.linePoints && <polyline points={geo.linePoints} fill="none" stroke="var(--sp-accent)" strokeWidth="1.5" />}
           {geo.lineDots.map((p, i) => (
-            <circle key={`line-${i}`} cx={p.x} cy={p.y} r={2.5} fill="var(--sp-accent)" />
+            <g key={`line-${i}`}>
+              <circle cx={p.x} cy={p.y} r={2.5} fill="var(--sp-accent)" />
+              <text x={p.x} y={p.y < 10 ? p.y + 11 : p.y - 5} fontSize="7" textAnchor="middle" fill="var(--sp-muted)">
+                {Math.round(statPoints[i].ovr)}
+              </text>
+            </g>
           ))}
           {geo.matchDots.map((p, i) => (
-            <circle key={`match-${i}`} cx={p.x} cy={p.y} r={2} fill="var(--sp-bg)" stroke="var(--sp-muted)" strokeWidth="1" />
+            <g key={`match-${i}`}>
+              <circle cx={p.x} cy={p.y} r={2} fill="var(--sp-bg)" stroke="var(--sp-muted)" strokeWidth="1" />
+              <text x={p.x} y={p.y < 10 ? p.y + 11 : p.y - 5} fontSize="7" textAnchor="middle" fill="var(--sp-muted)">
+                {Math.round(matchPoints[i].ovr)}
+              </text>
+            </g>
           ))}
           {geo.lineDots.length === 0 && geo.matchDots.length === 1 && (
             <circle cx={geo.matchDots[0].x} cy={geo.matchDots[0].y} r={3} fill="var(--sp-accent)" />
