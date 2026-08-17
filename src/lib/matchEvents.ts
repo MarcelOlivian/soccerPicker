@@ -204,3 +204,9 @@ export function formatMatchSummaryForShare(
     ...teamBPlayers.map(formatLine),
   ].join('\n');
 }
+
+/** Plain-text raw event log, one line per EventFeedEntry, chronological — mirrors formatMatchSummaryForShare's plain-text convention for pasting into a chat. */
+export function formatEventFeedForShare(entries: EventFeedEntry[]): string {
+  if (entries.length === 0) return 'No events recorded.';
+  return entries.map((e) => e.text).join('\n');
+}

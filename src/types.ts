@@ -51,7 +51,23 @@ export interface Player {
   statsVerifiedBy?: string[];
   /** Timestamp (Date.now()) of that vote's reveal-and-apply. */
   statsVerifiedAt?: number;
+  /** Every persisted stat change since this field existed. Absent/empty on players who predate it — see lib/statHistory.ts's effectiveStatHistory() for the vote-record backfill. */
+  statHistory?: StatHistoryEntry[];
   createdAt: number;
+}
+
+export type StatHistorySource = 'vote' | 'manual' | 'suggestion';
+
+export interface StatHistoryEntry {
+  /** Date.now() at the moment this change was saved. */
+  at: number;
+  /** Full stat snapshot after this change. */
+  stats: PlayerStats;
+  source: StatHistorySource;
+  /** Only set for source: 'vote'. */
+  verifiedBy?: string[];
+  /** Human-readable justification — only populated for source: 'suggestion' (the SuggestedChange's reasonText at accept time). */
+  note?: string;
 }
 
 export type FormationId = '5' | '6' | '7';

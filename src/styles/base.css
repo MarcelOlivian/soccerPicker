@@ -121,6 +121,7 @@ a {
 .sp-tabs {
   display: flex;
   gap: 2px;
+  flex-wrap: wrap;
 }
 
 .sp-tab {

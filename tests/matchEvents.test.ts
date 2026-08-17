@@ -3,6 +3,7 @@ import {
   buildEventFeed,
   describeEvent,
   findLastUndoableEvent,
+  formatEventFeedForShare,
   formatMatchSummaryForShare,
   tallyMatchStats,
   tallyTeamScore,
@@ -298,5 +299,20 @@ describe('formatMatchSummaryForShare', () => {
       [],
     );
     expect(text).toContain('- Bench Warmer\n');
+  });
+});
+
+describe('formatEventFeedForShare', () => {
+  it('joins entries by their text, in input order', () => {
+    const entries = buildEventFeed(
+      [goal('p1', 'A', false, 'g1', 60_000), foul('p2', 'FOUL_PLAY', 'FREE_KICK', 120_000)],
+      playerName,
+      teamName,
+    );
+    expect(formatEventFeedForShare(entries)).toBe('01:00 GOAL — Marcus\n02:00 FOUL (Foul Play, Free Kick) — Andrei');
+  });
+
+  it('returns a placeholder for an empty feed', () => {
+    expect(formatEventFeedForShare([])).toBe('No events recorded.');
   });
 });
