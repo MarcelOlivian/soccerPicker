@@ -41,7 +41,7 @@ export function MatchTab({ onNavigateToHistory }: MatchTabProps) {
 
   return (
     <div className="sp-match-tab">
-      {stage !== 'board' && role !== 'client' && <GoLivePanel />}
+      {role !== 'client' && <GoLivePanel />}
       {stage !== 'board' && role !== 'host' && <JoinScreen />}
 
       <nav className="sp-breadcrumb" aria-label="Match stage">
