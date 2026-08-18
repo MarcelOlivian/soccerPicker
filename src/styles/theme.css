@@ -1,50 +1,68 @@
 /*
- * SquadRef — "blueprint" theme tokens.
- * Warm greige canvas, near-black ink, hairline rules, one signal colour per team.
- * Not a dark theme: this is a deliberate mid-tone, paper-and-drafting-table look.
+ * SquadRef — "turf glass" theme tokens.
+ * Deep near-black-green canvas seen through a blurred grass field, warm-white
+ * text, vivid glass surfaces, brighter/more saturated team + signal colors.
  */
 
 :root {
   /* surfaces */
-  --sp-bg: #c9c6bc;
-  --sp-panel: #d6d3c9;
-  --sp-panel-raised: #ded9cd;
-  --sp-well: #bcb9ae;
+  --sp-bg: #0b1912;
+  --sp-panel: #142a1e; /* opaque fallback: print, monogram stripes, photo frames */
+  --sp-panel-raised: #1a3324;
+  --sp-well: #0f2117;
+
+  /* glass surfaces */
+  --sp-glass-bg: rgba(20, 42, 30, 0.26);
+  --sp-glass-bg-raised: rgba(24, 50, 35, 0.46); /* modals/popovers that must read above cards */
+  /* Persistent chrome (header, the phone-only fixed compare bar) — needs to stay legible
+     regardless of scroll position, so it's more opaque than a card, but still lets the photo
+     background hint through rather than reading as a solid bar. */
+  --sp-chrome-bg: rgba(10, 24, 17, 0.7);
+  --sp-glass-border: rgba(255, 255, 255, 0.14);
+  --sp-glass-border-soft: rgba(255, 255, 255, 0.08);
+  --sp-glass-blur: 16px; /* few-at-once large panels: modal, .sp-panel, team columns, header */
+  --sp-glass-blur-sm: 8px; /* many-at-once small surfaces: .sp-card, attendance rows */
+  --sp-glass-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  --sp-glass-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
   /* ink */
-  --sp-ink: #1c1b18;
-  --sp-ink-soft: #35332d;
-  --sp-muted: #6e6b62;
-  --sp-line: #1c1b18;
-  --sp-line-soft: rgba(28, 27, 24, 0.35);
-  --sp-line-faint: rgba(28, 27, 24, 0.16);
+  --sp-ink: #f2f6ef;
+  --sp-ink-soft: rgba(242, 246, 239, 0.82);
+  --sp-muted: rgba(242, 246, 239, 0.62);
+  --sp-line: rgba(242, 246, 239, 0.55);
+  --sp-line-soft: rgba(242, 246, 239, 0.3);
+  --sp-line-faint: rgba(242, 246, 239, 0.14);
 
   /* teams / signal */
-  --sp-team-a: #b45309;
-  --sp-team-a-ink: #ffffff;
-  --sp-team-b: #0f5c63;
-  --sp-team-b-ink: #ffffff;
-  --sp-accent: #b45309;
-  --sp-danger: #9b2c2c;
-  --sp-ok: #2f6b3a;
+  --sp-team-a: #ffab40;
+  --sp-team-a-ink: #1a1206;
+  --sp-team-b: #2fe0c9;
+  --sp-team-b-ink: #062420;
+  /* Independent of --sp-team-a (unlike the old flat theme, which aliased them) — amber-as-accent
+     would compete with the amber team color wherever selection/focus/suggestion glows appear
+     outside a team context. A distinct vivid lime-green "signal" hue instead. */
+  --sp-accent: #7ee043;
+  --sp-danger: #ff6b6b;
+  --sp-ok: #34d399;
 
-  /* Compare tab: 3rd/4th simultaneous radar series (1st/2nd reuse --sp-team-a/--sp-team-b). Muted violet + gold — deliberately off the amber/teal/red/green hues already claimed elsewhere. */
-  --sp-compare-3: #5c4a8f;
-  --sp-compare-4: #a5811a;
+  /* Compare tab: 3rd/4th simultaneous radar series (1st/2nd reuse --sp-team-a/--sp-team-b). */
+  --sp-compare-3: #a78bfa;
+  --sp-compare-4: #fde047;
 
-  /* Captain card highlight on the Field stage — same rgba-tint pattern as the banners below. */
-  --sp-team-a-tint: rgba(180, 83, 9, 0.12);
-  --sp-team-b-tint: rgba(15, 92, 99, 0.12);
-  /* Very slight background tint on a card whose stats came straight from a vote — much lower opacity than the captain tint, and not team-scoped, since verified cards show up mostly in the roster grid. */
-  --sp-verified-tint: rgba(47, 107, 58, 0.06);
+  /* Captain card highlight on the Field stage — same rgba-tint-over-surface pattern as before,
+     brightened to stay visible over a translucent glass base. */
+  --sp-team-a-tint: rgba(255, 171, 64, 0.16);
+  --sp-team-b-tint: rgba(47, 224, 201, 0.16);
+  --sp-verified-tint: rgba(52, 211, 153, 0.1);
 
-  /* Field stage pitch — muted, desaturated so it sits with the greige palette rather than fighting it. */
+  /* Field stage pitch — vivid, saturated mow-stripe green; stays crisp/unblurred, unlike the
+     ambient background. */
   --sp-pitch-green: #7e9163;
   --sp-pitch-green-alt: #748557;
 
   /* stat blocks */
   --sp-block-on: var(--sp-ink);
-  --sp-block-off: rgba(28, 27, 24, 0.18);
+  --sp-block-off: rgba(242, 246, 239, 0.2);
 
   /*
    * Sizes that the phone breakpoint needs to override. Kept here as tokens so
@@ -61,11 +79,19 @@
   --sp-font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas,
     monospace;
 
-  /* geometry — deliberately square, no radii anywhere */
-  --sp-radius: 0px;
+  /* Self-contained SVG turbulence grain tile — the alpha is baked into the raster via
+     feColorMatrix, so it composites correctly as an extra background-image layer with no
+     background-blend-mode required for the alpha itself. */
+  --sp-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='3' stitchTiles='stitch' result='noise'/%3E%3CfeColorMatrix in='noise' type='matrix' values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* geometry — rounded, tiered (replaces the old "deliberately square" law) */
+  --sp-radius-sm: 8px; /* badges, buttons, tabs, small chrome */
+  --sp-radius: 16px; /* cards, panels, modal */
+  --sp-radius-lg: 24px; /* pitch */
   --sp-border: 1px solid var(--sp-line);
   --sp-border-soft: 1px solid var(--sp-line-soft);
   --sp-border-faint: 1px solid var(--sp-line-faint);
+  --sp-glass-edge: 1px solid var(--sp-glass-border);
 
   /* spacing scale */
   --sp-space-1: 4px;
@@ -76,5 +102,5 @@
   --sp-space-6: 32px;
   --sp-space-7: 48px;
 
-  color-scheme: light;
+  color-scheme: dark;
 }
