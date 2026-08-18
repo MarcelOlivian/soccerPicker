@@ -115,6 +115,9 @@ async function attendAndStartDraft(page: import('@playwright/test').Page) {
   await page.goto(APP_URL);
   await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await page.getByRole('tab', { name: 'Match' }).click();
+  // Switch to 7-a-side so all 14 loaded demo players exactly match the formation's
+  // required headcount — Continue to draft is disabled otherwise.
+  await page.getByRole('button', { name: '7-a-side', exact: true }).click();
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
   for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
@@ -285,7 +288,7 @@ test('live match tracking (clock/events/boardMode) is host-only and never reache
 
   await attendAndStartDraft(host);
   await host.getByRole('button', { name: /Auto-draft teams/i }).click();
-  await host.getByRole('button', { name: /Skip to Field/i }).click();
+  await host.getByRole('button', { name: /Continue to Field/i }).click();
   await host.getByRole('button', { name: 'Auto-fill positions' }).click();
 
   await host.getByRole('button', { name: 'Go live' }).click();

@@ -51,6 +51,9 @@ test("flipping one card doesn't move its Edit/Dup/Del row relative to a row-mate
 test('Draft-stage deck cards also get the radar flip icon, Field/History cards do not', async ({ page }) => {
   await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await page.getByRole('tab', { name: 'Match' }).click();
+  // Switch to 7-a-side so all 14 loaded demo players exactly match the formation's
+  // required headcount — Continue to draft is disabled otherwise.
+  await page.getByRole('button', { name: '7-a-side', exact: true }).click();
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
   for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
@@ -61,7 +64,9 @@ test('Draft-stage deck cards also get the radar flip icon, Field/History cards d
 
   await expect(page.locator('.sp-draft-deck .sp-card').first().locator('.sp-card__flip')).toBeVisible();
 
-  await page.getByRole('button', { name: /Skip to Field/i }).click();
+  page.on('dialog', (dialog) => dialog.accept());
+  await page.getByRole('button', { name: /Auto-draft teams/i }).click();
+  await page.getByRole('button', { name: /Continue to Field/i }).click();
   await expect(page.locator('.sp-team-column .sp-card__flip')).toHaveCount(0);
 });
 

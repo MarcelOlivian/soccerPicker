@@ -244,9 +244,10 @@ export function DraftStage({ onContinue }: DraftStageProps) {
           <button
             type="button"
             className={`sp-btn sp-btn--ghost ${complete ? 'sp-btn--ready' : ''}`}
+            disabled={!complete}
             onClick={onContinue}
           >
-            Skip to Field →
+            Continue to Field →
           </button>
         </div>
       )}

@@ -1,3 +1,4 @@
+import { formatMatchStartedAt } from './dateFormat';
 import { formatClock } from './matchClock';
 import type { FoulType, MatchEvent, RestartType, Team } from '../types';
 
@@ -98,13 +99,22 @@ export interface EventFeedEntry {
  * immediately after it (see BoardStage's handleRecordGoal — at most one of
  * each, in either order), and a cross-position SWAP folds its two adjacent
  * POSITION_CHANGE entries into one line.
+ *
+ * `clockStartedAt`, when given (match.clock.startedAt — a real wall-clock
+ * Date.now() value, not match-elapsed time), prepends a "Match started —
+ * HH:MM DD.MM.YYYY" line so the log shows exactly when tracking began, even
+ * before any goals/fouls are recorded.
  */
 export function buildEventFeed(
   events: MatchEvent[],
   playerName: (playerId: string) => string,
   teamName: (team: Team) => string,
+  clockStartedAt?: number | null,
 ): EventFeedEntry[] {
   const entries: EventFeedEntry[] = [];
+  if (clockStartedAt) {
+    entries.push({ id: 'match-start', atMs: 0, text: `Match started — ${formatMatchStartedAt(clockStartedAt)}` });
+  }
   for (let i = 0; i < events.length; i++) {
     const event = events[i];
     const minute = formatClock(event.atMs);

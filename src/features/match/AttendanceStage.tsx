@@ -12,6 +12,7 @@ export function AttendanceStage({ onContinue }: AttendanceStageProps) {
   const need = totalPlayers(match.formation);
   const have = match.attendingIds.length;
   const short = have < need;
+  const ready = have === need;
 
   function setFormation(formation: FormationId) {
     dispatch({ type: 'SET_FORMATION', formation });
@@ -37,9 +38,10 @@ export function AttendanceStage({ onContinue }: AttendanceStageProps) {
             </button>
           ))}
         </div>
-        <p className={`sp-hint ${short ? 'sp-hint--warn' : ''}`}>
+        <p className={`sp-hint ${ready ? '' : 'sp-hint--warn'}`}>
           {FORMATION_LABELS[match.formation]} plays best with {need} ({need / 2} per team). {have} attending
           tonight.
+          {ready ? ' Ready to draft.' : short ? ` Need ${need - have} more.` : ` ${have - need} too many — remove someone to draft.`}
         </p>
       </div>
 
@@ -68,7 +70,7 @@ export function AttendanceStage({ onContinue }: AttendanceStageProps) {
       </div>
 
       <div className="sp-stage__actions">
-        <button type="button" className="sp-btn sp-btn--primary" disabled={have < 2} onClick={onContinue}>
+        <button type="button" className="sp-btn sp-btn--primary" disabled={!ready} onClick={onContinue}>
           Continue to draft →
         </button>
       </div>

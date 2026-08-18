@@ -412,6 +412,7 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
     match.events,
     (playerId) => byId.get(playerId)?.name ?? 'Unknown',
     (team) => (team === 'A' ? teamAName : teamBName),
+    match.clock.startedAt,
   );
 
   return (
@@ -435,12 +436,39 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           </button>
         </div>
       )}
+      {!isClient && match.boardMode === 'setup' && (
+        <div className="sp-clock-bar">
+          <div className="sp-clock-bar__controls">
+            <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
+              Auto-fill positions
+            </button>
+            <button
+              type="button"
+              className="sp-btn sp-btn--sm sp-btn--ghost"
+              onClick={() => {
+                if (confirm('Clear all pitch placements?')) dispatch({ type: 'CLEAR_PLACEMENTS' });
+              }}
+            >
+              Clear placements
+            </button>
+            <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={handleSaveToHistory}>
+              Save to history
+            </button>
+            <button type="button" className="sp-btn sp-btn--sm sp-btn--ghost" onClick={handleStartNewMatch}>
+              Start new match
+            </button>
+          </div>
+        </div>
+      )}
       {match.boardMode === 'tracking' && (
         <div className="sp-clock-bar">
           <span className="sp-clock-bar__score">
             {teamAName} {scoreA} – {scoreB} {teamBName}
           </span>
-          <span className="sp-clock-bar__time">{formatClock(computeElapsedMs(match.clock))}</span>
+          <span className="sp-clock-bar__time">
+            {formatClock(computeElapsedMs(match.clock))}
+            {isClockRunning(match.clock) && <span className="sp-clock-bar__rec" title="Recording" aria-hidden="true" />}
+          </span>
           {!isClient && (
             <div className="sp-clock-bar__controls">
               <button
@@ -543,6 +571,12 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
               <button type="button" className="sp-btn sp-btn--ghost" onClick={handleCopyForWhatsApp}>
                 Copy for WhatsApp
               </button>
+              <button type="button" className="sp-btn sp-btn--ready" onClick={handleSaveToHistory}>
+                Save to history
+              </button>
+              <button type="button" className="sp-btn sp-btn--ghost" onClick={handleStartNewMatch}>
+                Start new match
+              </button>
             </div>
           )}
         </div>
@@ -622,36 +656,6 @@ export function BoardStage({ onStartNewMatch, onNavigateToHistory }: BoardStageP
           onDropUnassign={handleUnassignDrop}
         />
       </div>
-      {!isClient && (
-        <div className="sp-stage__actions">
-          {match.boardMode === 'setup' && (
-            <>
-              <button type="button" className="sp-btn sp-btn--ghost" disabled={unplacedCount === 0} onClick={handleAutoFill}>
-                Auto-fill positions
-              </button>
-              <button
-                type="button"
-                className="sp-btn sp-btn--ghost"
-                onClick={() => {
-                  if (confirm('Clear all pitch placements?')) dispatch({ type: 'CLEAR_PLACEMENTS' });
-                }}
-              >
-                Clear placements
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            className={`sp-btn sp-btn--ghost ${match.boardMode === 'finished' ? 'sp-btn--ready' : ''}`}
-            onClick={handleSaveToHistory}
-          >
-            Save to history
-          </button>
-          <button type="button" className="sp-btn sp-btn--ghost" onClick={handleStartNewMatch}>
-            Start new match
-          </button>
-        </div>
-      )}
       {eventTarget && !isClient && byId.get(eventTarget.playerId) && (
         <EventMenu
           player={byId.get(eventTarget.playerId)!}
