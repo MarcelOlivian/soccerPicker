@@ -3,8 +3,16 @@
 .sp-card {
   position: relative;
   width: var(--sp-card-w);
-  background: var(--sp-panel-raised);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 140px 140px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur-sm));
+  overflow: hidden; /* clips the grain tile + .sp-card__bar strip to the rounded corners */
   display: flex;
   flex-direction: column;
 }
@@ -34,13 +42,17 @@
   pointer-events: none;
 }
 
+/* An outline doesn't reliably follow border-radius across engines and reads flat against a
+   glass card — a layered box-shadow ring + glow instead. */
 .sp-card--selected {
-  outline: 2px solid var(--sp-accent);
-  outline-offset: -2px;
+  box-shadow: 0 0 0 2px var(--sp-accent), 0 0 20px rgba(126, 224, 67, 0.45), var(--sp-glass-shadow);
 }
 
+/* opacity:0.35 stacked on an already-translucent glass card would nearly vanish against a busy
+   grass background — desaturate instead of further-transparent. */
 .sp-card--faded {
-  opacity: 0.35;
+  opacity: 0.55;
+  filter: grayscale(0.6);
   pointer-events: none;
 }
 
@@ -59,26 +71,26 @@
 
 /*
  * The tint tokens are translucent rgba (so they can double as text-safe
- * accents elsewhere), but a card's background must stay a fully opaque
- * solid — otherwise the page's dot-grid canvas (or, on the Field stage,
- * the green pitch underneath) shows through. Painting the tint as a
- * background-image layer on top of the solid --sp-panel-raised color
- * (rather than using it as the background-color directly) keeps the
- * result opaque while still applying the tint.
+ * accents elsewhere). Painting the tint as a background-image layer on top
+ * of the card's own translucent glass base (rather than using it as the
+ * background-color directly) lets both stack instead of one replacing the
+ * other. These three states drop the grain layer for simplicity — a tinted
+ * glass card without grain is a negligible visual loss vs. juggling a
+ * 3-layer background-image stack correctly.
  */
 
 /* Field stage only — makes the captain's card easy to spot in a team panel or on the pitch. */
 .sp-card--captain[data-team='A'] {
-  background: linear-gradient(var(--sp-team-a-tint), var(--sp-team-a-tint)), var(--sp-panel-raised);
+  background: linear-gradient(var(--sp-team-a-tint), var(--sp-team-a-tint)), var(--sp-glass-bg);
 }
 
 .sp-card--captain[data-team='B'] {
-  background: linear-gradient(var(--sp-team-b-tint), var(--sp-team-b-tint)), var(--sp-panel-raised);
+  background: linear-gradient(var(--sp-team-b-tint), var(--sp-team-b-tint)), var(--sp-glass-bg);
 }
 
 /* Not team-scoped, unlike the captain tint above — a verified card should read as tinted everywhere, including the roster grid where cards have no team yet. */
 .sp-card--verified {
-  background: linear-gradient(var(--sp-verified-tint), var(--sp-verified-tint)), var(--sp-panel-raised);
+  background: linear-gradient(var(--sp-verified-tint), var(--sp-verified-tint)), var(--sp-glass-bg);
 }
 
 .sp-card__flip {
@@ -92,8 +104,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--sp-panel-raised);
-  border: var(--sp-border-soft);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
   color: var(--sp-ink);
   cursor: pointer;
 }
@@ -238,11 +251,19 @@
   z-index: 30;
   width: 200px;
   max-width: min(200px, calc(100vw - 24px));
-  background: var(--sp-panel-raised);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow-lg);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
   padding: var(--sp-space-3);
   text-align: left;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .sp-card__detail-photo {
@@ -310,8 +331,15 @@
   left: 0;
   z-index: 40;
   width: 200px;
-  background: var(--sp-panel-raised);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow-lg);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
   padding: var(--sp-space-2);
   font-size: 11px;
   font-weight: 500;
@@ -320,6 +348,7 @@
   color: var(--sp-ink);
   white-space: normal;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .sp-card__stats {
@@ -439,6 +468,7 @@
   height: 88px;
   flex-shrink: 0;
   border: var(--sp-border-soft);
+  border-radius: var(--sp-radius-sm);
   background: var(--sp-well);
   display: flex;
   align-items: center;
@@ -487,17 +517,21 @@
 
 .sp-roster-toolbar input[type='text'] {
   flex: 1;
-  background: var(--sp-bg);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
   padding: var(--sp-space-2);
   font-family: var(--sp-font-mono);
+  color: var(--sp-ink);
 }
 
 .sp-roster-toolbar select {
-  background: var(--sp-bg);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
   padding: var(--sp-space-2);
   font-family: var(--sp-font-mono);
+  color: var(--sp-ink);
 }
 
 .sp-player-grid {
@@ -613,13 +647,17 @@
   font-size: 20px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
   padding: var(--sp-space-1) var(--sp-space-3);
-  background: var(--sp-bg);
+  background: var(--sp-glass-bg-raised);
 }
 
 .sp-session-share__qr {
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  /* Stays opaque white — a QR code needs real contrast against its quiet zone to stay scannable,
+     not a translucent glass tint. */
   background: #fff;
   padding: 4px;
 }
@@ -667,7 +705,7 @@
 
 /* Same "this is done/ready" tint used elsewhere (e.g. .sp-btn--ready). */
 .sp-vote-panel__voted {
-  background: rgba(47, 107, 58, 0.15);
+  background: rgba(52, 211, 153, 0.22);
   border-color: var(--sp-ok);
   color: var(--sp-ok);
 }
@@ -733,8 +771,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--sp-space-2);
-  border: var(--sp-border);
-  background: var(--sp-bg);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   padding: 2px var(--sp-space-2);
   font-size: 11px;
   max-width: 360px;
@@ -765,8 +804,9 @@
 
 .sp-breadcrumb__step {
   appearance: none;
-  border: var(--sp-border);
-  background: var(--sp-panel);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   color: var(--sp-muted);
   padding: var(--sp-space-2) var(--sp-space-4);
   font-weight: 700;
@@ -775,13 +815,14 @@
 }
 
 .sp-breadcrumb__step--active {
-  background: var(--sp-ink);
-  color: var(--sp-bg);
+  background: var(--sp-accent);
+  color: #0e1a0a;
+  border-color: var(--sp-accent);
 }
 
 /* Signals "the draft's done, come take a look" — only while it isn't already the active step. */
 .sp-breadcrumb__step--ready:not(.sp-breadcrumb__step--active) {
-  background: rgba(47, 107, 58, 0.15);
+  background: rgba(52, 211, 153, 0.22);
   border-color: var(--sp-ok);
   color: var(--sp-ok);
 }
@@ -813,8 +854,9 @@
 
 .sp-mode-toggle__btn {
   appearance: none;
-  border: var(--sp-border);
-  background: var(--sp-well);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   color: var(--sp-ink);
   padding: var(--sp-space-1) var(--sp-space-4);
   font-weight: 700;
@@ -824,8 +866,9 @@
 }
 
 .sp-mode-toggle__btn--active {
-  background: var(--sp-ink);
-  color: var(--sp-bg);
+  background: var(--sp-accent);
+  color: #0e1a0a;
+  border-color: var(--sp-accent);
 }
 
 .sp-clock-bar {
@@ -833,8 +876,16 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-space-3);
-  border: var(--sp-border);
-  background: var(--sp-panel);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
 }
 
@@ -905,8 +956,16 @@
 /* ---------- event feed (compact ticker + expandable chronological log) ---------- */
 
 .sp-event-feed {
-  border: var(--sp-border);
-  background: var(--sp-panel);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
 }
 
@@ -932,12 +991,15 @@
 
 /* A referee popup with no existing precedent in this app (the closest
    analog, .sp-card__detail, is anchored to its own card, not centered) — so
-   this introduces the app's one full-screen modal pattern, kept flat and
-   square like everything else here. */
+   this introduces the app's one full-screen modal pattern. The backdrop
+   itself blurs whatever's behind it — the one place backdrop-filter on the
+   scrim itself makes sense, since there's real content there to sample. */
 .sp-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(28, 27, 24, 0.5);
+  background: rgba(6, 14, 10, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -946,8 +1008,19 @@
 }
 
 .sp-modal-panel {
-  background: var(--sp-panel-raised);
-  border: var(--sp-border);
+  /* More opaque than --sp-glass-bg — a panel floating over an already-blurred backdrop needs
+     its own opacity or the double-blur (backdrop blurs the page, panel blurs the backdrop
+     again) reads muddy. */
+  background: var(--sp-glass-bg-raised);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow-lg);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-4);
   width: 100%;
   max-width: min(320px, calc(100vw - 32px));
@@ -983,7 +1056,11 @@
   display: flex;
   align-items: center;
   gap: var(--sp-space-2);
-  border: var(--sp-border-faint);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg);
+  backdrop-filter: blur(var(--sp-glass-blur-sm));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur-sm));
   padding: var(--sp-space-2);
   cursor: pointer;
 }
@@ -1002,9 +1079,17 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: var(--sp-space-3);
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
-  background: var(--sp-panel);
 }
 
 .sp-draft-header__turn {
@@ -1019,8 +1104,10 @@
 }
 
 .sp-draft-header__controls select {
-  background: var(--sp-bg);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-ink);
   padding: var(--sp-space-1) var(--sp-space-2);
   font-family: var(--sp-font-mono);
   font-size: 11px;
@@ -1047,8 +1134,16 @@
 }
 
 .sp-draft-column {
-  background: var(--sp-panel);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
   min-height: 200px;
 }
@@ -1131,8 +1226,10 @@
 
 .sp-history-entry__score-form input {
   width: 64px;
-  background: var(--sp-bg);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  color: var(--sp-ink);
   padding: var(--sp-space-1) var(--sp-space-2);
   font-family: var(--sp-font-mono);
 }
@@ -1168,9 +1265,17 @@
 /* ---------- balance meter ---------- */
 
 .sp-balance-meter {
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
-  background: var(--sp-panel);
 }
 
 .sp-balance-meter__row {
@@ -1250,7 +1355,16 @@
 }
 
 .sp-team-column {
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-3);
   min-height: 200px;
 }
@@ -1288,18 +1402,27 @@
   width: 100%;
 }
 
+/* Deliberately breaks from "everything is soft glass" — the pitch stays crisp and vivid, not
+   blurred, per the mockups. Rounded + glowing like the rest, with a faint grain for cohesion. */
 .sp-pitch {
   position: relative;
   width: 100%;
   aspect-ratio: 100 / 60;
-  background: repeating-linear-gradient(
-    90deg,
-    var(--sp-pitch-green) 0,
-    var(--sp-pitch-green) 40px,
-    var(--sp-pitch-green-alt) 40px,
-    var(--sp-pitch-green-alt) 80px
-  );
-  border: var(--sp-border);
+  background-image:
+    var(--sp-grain),
+    repeating-linear-gradient(
+      90deg,
+      var(--sp-pitch-green) 0,
+      var(--sp-pitch-green) 40px,
+      var(--sp-pitch-green-alt) 40px,
+      var(--sp-pitch-green-alt) 80px
+    );
+  background-blend-mode: overlay, normal;
+  background-size: 160px 160px, auto;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-lg);
+  box-shadow: 0 0 0 1px rgba(126, 224, 67, 0.12), 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(47, 166, 63, 0.25);
+  overflow: hidden;
   grid-area: field;
 }
 
@@ -1381,8 +1504,10 @@
   height: 18px;
   line-height: 16px;
   padding: 0;
-  border: var(--sp-border);
-  background: var(--sp-bg);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
+  color: var(--sp-ink);
   font-weight: 700;
 }
 
@@ -1391,14 +1516,15 @@
   height: calc(var(--sp-slot-w) - 16px);
   margin: 0 auto;
   border: 1px dashed var(--sp-line-soft);
-  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--sp-radius-sm);
+  background: rgba(255, 255, 255, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: var(--sp-muted);
+  color: var(--sp-ink);
 }
 
 .sp-slot__placeholder--target {
@@ -1518,16 +1644,32 @@
 }
 
 .sp-compare-panel {
-  background: var(--sp-panel);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-4);
 }
 
-/* Same opaque-panel treatment as .sp-compare-panel above — without it the
-   dot-grid canvas shows straight through behind the chart on phone. */
+/* Same glass-panel treatment as .sp-compare-panel above — without it the ambient background
+   shows straight through behind the chart on phone. */
 .sp-compare-radar-view {
-  background: var(--sp-panel);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-4);
 }
 
@@ -1587,8 +1729,16 @@
 
 .sp-evolution-panel,
 .sp-evolution-detail-view {
-  background: var(--sp-panel);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
+  overflow: hidden;
   padding: var(--sp-space-4);
 }
 
@@ -1634,8 +1784,10 @@
 }
 
 .sp-evolution-suggestion {
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
   border-color: var(--sp-accent);
+  border-radius: var(--sp-radius-sm);
+  box-shadow: 0 0 24px rgba(126, 224, 67, 0.25);
   padding: var(--sp-space-3);
   margin: var(--sp-space-3) 0;
 }
@@ -1797,6 +1949,9 @@
     padding-bottom: 76px; /* clears the fixed bottom bar below */
   }
 
+  /* Persistent-position anchor (fixed to the viewport regardless of scroll), same treatment as
+     .sp-header — higher opacity + moderate blur rather than the standard panel recipe, so it
+     stays legible no matter what's scrolled beneath it. */
   .sp-compare-bar {
     position: fixed;
     left: 0;
@@ -1807,8 +1962,11 @@
     align-items: center;
     gap: var(--sp-space-2);
     padding: var(--sp-space-2) var(--sp-space-3);
-    background: var(--sp-panel-raised);
-    border-top: var(--sp-border);
+    background: rgba(8, 20, 14, 0.86);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-top: var(--sp-glass-edge);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.35);
   }
 
   .sp-compare-bar__count {

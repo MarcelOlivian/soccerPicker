@@ -45,7 +45,20 @@ function AppShell() {
     <div className="sp-app">
       <header className="sp-header">
         <div className="sp-header__brand">
-          S Q U A D - R E F
+          <span className="sp-header__brand-row">
+            <svg className="sp-header__logo" viewBox="0 0 22 24" aria-hidden="true">
+              <path
+                d="M11 1.5 L20 5 V11.5 C20 17 16 21 11 22.5 C6 21 2 17 2 11.5 V5 Z"
+                fill="none"
+                stroke="var(--sp-accent)"
+                strokeWidth="1.4"
+                strokeLinejoin="round"
+              />
+              <circle cx="11" cy="11" r="3.4" fill="none" stroke="var(--sp-accent)" strokeWidth="1.1" />
+              <path d="M11 7.6 L13 9 L12.2 11.4 L9.8 11.4 L9 9 Z" fill="var(--sp-accent)" />
+            </svg>
+            S Q U A D - R E F
+          </span>
           <small>Draft fair. Ref easy. Track everything.</small>
         </div>
         <Tabs

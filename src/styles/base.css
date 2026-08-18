@@ -15,17 +15,52 @@ body,
 }
 
 body {
+  position: relative;
   margin: 0;
   background: var(--sp-bg);
-  background-image:
-    linear-gradient(var(--sp-line-faint) 1px, transparent 1px),
-    linear-gradient(90deg, var(--sp-line-faint) 1px, transparent 1px);
-  background-size: 24px 24px;
   color: var(--sp-ink);
   font-family: var(--sp-font-mono);
   font-size: 14px;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden; /* the oversized ::before must never introduce a horizontal scrollbar */
+}
+
+/* Layer 1: the blurred "out-of-focus grass field" — three repeating-gradient stripe fields at
+   different angles/frequencies (avoids a mechanical look), darkened toward the edges, then
+   blurred as a whole. Oversized 20% beyond the viewport and centered so the blur's own edge
+   falloff falls outside the visible area. filter:blur() is correct here (not backdrop-filter,
+   which needs real content behind it to sample — we're blurring the gradients painted ON this
+   element). */
+body::before {
+  content: '';
+  position: fixed;
+  inset: -10%;
+  width: 120%;
+  height: 120%;
+  z-index: -2;
+  background-image:
+    radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 35%, rgba(0, 0, 0, 0.55) 100%),
+    repeating-linear-gradient(115deg, #16341f 0px, #16341f 34px, #123023 34px, #123023 68px),
+    repeating-linear-gradient(72deg, rgba(35, 87, 45, 0.5) 0px, rgba(35, 87, 45, 0.5) 22px, rgba(15, 40, 26, 0.5) 22px, rgba(15, 40, 26, 0.5) 55px),
+    repeating-linear-gradient(3deg, rgba(20, 60, 34, 0.35) 0px, rgba(20, 60, 34, 0.35) 90px, rgba(9, 26, 16, 0.35) 90px, rgba(9, 26, 16, 0.35) 160px),
+    linear-gradient(180deg, #0d1f15 0%, #0a170f 100%);
+  background-blend-mode: normal, soft-light, soft-light, overlay, normal;
+  filter: blur(48px) saturate(1.15);
+  transform: translateZ(0);
+}
+
+/* Layer 2: crisp low-opacity grain, unblurred, tiled, above the blurred grass but below content. */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--sp-grain);
+  background-size: 220px 220px;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  pointer-events: none;
 }
 
 h1,
@@ -72,13 +107,24 @@ a {
   flex-direction: column;
 }
 
+#root {
+  position: relative;
+  z-index: 0; /* explicit stacking context above body::before/::after */
+  height: 100%;
+}
+
 .sp-header {
+  position: relative;
+  z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--sp-space-5);
   padding: var(--sp-space-3) var(--sp-space-5);
-  border-bottom: var(--sp-border);
-  background: var(--sp-panel);
+  border-bottom: var(--sp-glass-edge);
+  background: rgba(8, 20, 14, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   flex-wrap: wrap;
 }
 
@@ -86,6 +132,18 @@ a {
   font-weight: 700;
   letter-spacing: 0.08em;
   white-space: nowrap;
+}
+
+.sp-header__brand-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+}
+
+.sp-header__logo {
+  width: 22px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .sp-header__brand small {
@@ -126,8 +184,9 @@ a {
 
 .sp-tab {
   appearance: none;
-  border: var(--sp-border);
-  background: var(--sp-well);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   color: var(--sp-ink);
   padding: var(--sp-space-2) var(--sp-space-4);
   font-weight: 700;
@@ -137,16 +196,18 @@ a {
 }
 
 .sp-tab[aria-selected='true'] {
-  background: var(--sp-ink);
-  color: var(--sp-bg);
+  background: var(--sp-accent);
+  color: #0e1a0a;
+  border-color: var(--sp-accent);
 }
 
 /* ---------- buttons ---------- */
 
 .sp-btn {
   appearance: none;
-  border: var(--sp-border);
-  background: var(--sp-panel);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   color: var(--sp-ink);
   padding: var(--sp-space-2) var(--sp-space-3);
   font-weight: 700;
@@ -162,46 +223,52 @@ a {
 .sp-btn:hover {
   background: var(--sp-ink);
   color: var(--sp-bg);
+  border-color: var(--sp-ink);
 }
 
 .sp-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  background: var(--sp-panel);
+  background: var(--sp-glass-bg-raised);
   color: var(--sp-ink);
 }
 
+/* Primary now fills with the accent green rather than an ink-invert — on a dark theme, ink is
+   near-white, so an ink-filled button would look identical to a disabled one. The accent fill
+   preserves "this is the emphasized action." */
 .sp-btn--primary {
-  background: var(--sp-ink);
-  color: var(--sp-bg);
+  background: var(--sp-accent);
+  color: #0e1a0a;
+  border-color: var(--sp-accent);
 }
 
 .sp-btn--primary:hover {
-  background: var(--sp-accent);
-  border-color: var(--sp-accent);
-  color: #fff;
+  background: #93ec5e;
+  border-color: #93ec5e;
+  color: #0e1a0a;
 }
 
 .sp-btn--danger:hover {
   background: var(--sp-danger);
   border-color: var(--sp-danger);
-  color: #fff;
+  color: #2a0a0a;
 }
 
 .sp-btn--ghost {
   background: transparent;
+  border-color: var(--sp-glass-border-soft);
 }
 
 /* Signals "this is worth doing now" — e.g. the draft is complete, go check the field. */
 .sp-btn--ready {
-  background: rgba(47, 107, 58, 0.15);
+  background: rgba(52, 211, 153, 0.22);
   border-color: var(--sp-ok);
   color: var(--sp-ok);
 }
 
 .sp-btn--ready:hover {
   background: var(--sp-ok);
-  color: #fff;
+  color: #04241a;
 }
 
 .sp-btn--sm {
@@ -212,8 +279,15 @@ a {
 /* ---------- panels / form fields ---------- */
 
 .sp-panel {
-  background: var(--sp-panel);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg);
+  background-image: var(--sp-grain);
+  background-size: cover, 160px 160px;
+  background-blend-mode: normal, overlay;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius);
+  box-shadow: var(--sp-glass-shadow);
+  backdrop-filter: blur(var(--sp-glass-blur));
+  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
   padding: var(--sp-space-4);
 }
 
@@ -237,10 +311,12 @@ a {
 .sp-field input[type='number'],
 .sp-field select,
 .sp-field textarea {
-  background: var(--sp-bg);
-  border: var(--sp-border);
+  background: var(--sp-glass-bg-raised);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
   padding: var(--sp-space-2);
   font-family: var(--sp-font-mono);
+  color: var(--sp-ink);
 }
 
 .sp-field textarea {
@@ -264,7 +340,9 @@ a {
 .sp-badge {
   display: inline-flex;
   align-items: center;
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   padding: 1px 6px;
   font-size: 10px;
   font-weight: 700;
@@ -272,7 +350,9 @@ a {
 }
 
 .sp-banner {
-  border: var(--sp-border);
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
   padding: var(--sp-space-3);
   margin-bottom: var(--sp-space-4);
   display: flex;
@@ -282,12 +362,12 @@ a {
 }
 
 .sp-banner--danger {
-  background: rgba(155, 44, 44, 0.12);
+  background: linear-gradient(rgba(255, 107, 107, 0.18), rgba(255, 107, 107, 0.18)), var(--sp-glass-bg-raised);
   border-color: var(--sp-danger);
 }
 
 .sp-banner--info {
-  background: rgba(15, 92, 99, 0.1);
+  background: linear-gradient(rgba(47, 224, 201, 0.16), rgba(47, 224, 201, 0.16)), var(--sp-glass-bg-raised);
   border-color: var(--sp-team-b);
 }
 
@@ -337,6 +417,11 @@ a {
    * Aimed at printing the finished lineup off the board stage: keep the
    * pitch, team columns, cards and balance meter, drop navigation and any
    * control that only makes sense on-screen (undo, clear-slot, edit/dup/del).
+   * Every glass mechanism (blur, grain, translucency, the fixed ambient
+   * background layers) is neutralized here rather than just resetting body's
+   * color — backdrop-filter with nothing "real" behind it can rasterize as a
+   * solid black rectangle in some print engines instead of degrading
+   * gracefully.
    */
   .sp-header,
   .sp-no-print,
@@ -349,10 +434,37 @@ a {
   }
   body {
     background: #fff;
+    color: #111;
+  }
+  body::before,
+  body::after {
+    display: none;
   }
   .sp-main {
     padding: 0;
     max-width: none;
+  }
+  .sp-card,
+  .sp-panel,
+  .sp-modal-panel,
+  .sp-team-column,
+  .sp-draft-column,
+  .sp-balance-meter,
+  .sp-compare-panel,
+  .sp-compare-radar-view,
+  .sp-evolution-panel,
+  .sp-evolution-detail-view,
+  .sp-vote-host-panel,
+  .sp-clock-bar,
+  .sp-event-feed,
+  .sp-draft-header {
+    background: #fff !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 1px solid #999 !important;
+    color: #111;
   }
   .sp-pitch,
   .sp-card,
