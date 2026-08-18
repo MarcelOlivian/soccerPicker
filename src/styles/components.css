@@ -1962,7 +1962,7 @@
     align-items: center;
     gap: var(--sp-space-2);
     padding: var(--sp-space-2) var(--sp-space-3);
-    background: rgba(8, 20, 14, 0.86);
+    background: var(--sp-chrome-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-top: var(--sp-glass-edge);

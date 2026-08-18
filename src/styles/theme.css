@@ -12,8 +12,12 @@
   --sp-well: #0f2117;
 
   /* glass surfaces */
-  --sp-glass-bg: rgba(20, 42, 30, 0.38);
-  --sp-glass-bg-raised: rgba(24, 50, 35, 0.62); /* modals/popovers that must read above cards */
+  --sp-glass-bg: rgba(20, 42, 30, 0.26);
+  --sp-glass-bg-raised: rgba(24, 50, 35, 0.46); /* modals/popovers that must read above cards */
+  /* Persistent chrome (header, the phone-only fixed compare bar) — needs to stay legible
+     regardless of scroll position, so it's more opaque than a card, but still lets the photo
+     background hint through rather than reading as a solid bar. */
+  --sp-chrome-bg: rgba(10, 24, 17, 0.7);
   --sp-glass-border: rgba(255, 255, 255, 0.14);
   --sp-glass-border-soft: rgba(255, 255, 255, 0.08);
   --sp-glass-blur: 16px; /* few-at-once large panels: modal, .sp-panel, team columns, header */
