@@ -1,45 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { getImageUrl } from '../lib/imageStore';
 import { overall, overallDelta } from '../lib/rating';
 import { formatStatsVerifiedAt, isStatsVerified } from '../lib/statsVerified';
+import { usePlayerPhotoUrl } from '../lib/usePlayerPhotoUrl';
 import { STAT_KEYS } from '../types';
 import type { Player, Position, Team } from '../types';
 import { Monogram } from './Monogram';
+import { PlayerDetailModal } from './PlayerDetailModal';
 import { RadarChart } from './RadarChart';
 import { StatBlocks } from './StatBlocks';
-
-/** Resolves a player's photo to a displayable URL, whether it's an external link or an uploaded IndexedDB blob. */
-export function usePlayerPhotoUrl(player: Player): string | undefined {
-  const [url, setUrl] = useState<string | undefined>(player.photoUrl);
-
-  useEffect(() => {
-    let cancelled = false;
-    if (player.photoUrl) {
-      setUrl(player.photoUrl);
-      return;
-    }
-    if (player.photoKey) {
-      getImageUrl(player.photoKey).then((resolved) => {
-        if (!cancelled) setUrl(resolved);
-      });
-    } else {
-      setUrl(undefined);
-    }
-    return () => {
-      cancelled = true;
-    };
-  }, [player.photoUrl, player.photoKey]);
-
-  return url;
-}
-
-const DETAIL_HOVER_DELAY_MS = 1000;
-// Shorter than the mouse-hover delay — the conventional long-press
-// threshold on mobile OSes, so a hold doesn't feel sluggish compared to a
-// native context menu.
-const DETAIL_TOUCH_HOLD_DELAY_MS = 500;
-const TOUCH_MOVE_CANCEL_PX = 10;
 
 interface PlayerCardProps {
   player: Player;
@@ -56,11 +25,10 @@ interface PlayerCardProps {
   compact?: boolean;
   actions?: ReactNode;
   /**
-   * Hides the overall rating, the stat bars, and disables the hover/
-   * long-press detail popup (which would otherwise leak those same stats).
-   * Used for the stats-voting subject card, so a voter is never anchored
-   * by the very numbers they're about to secretly vote on. The position
-   * badge stays — voters are told the position, just not the rating.
+   * Hides the overall rating, the stat bars, and the inspect icon (which would otherwise leak
+   * those same stats via the detail modal). Used for the stats-voting subject card, so a voter
+   * is never anchored by the very numbers they're about to secretly vote on. The position badge
+   * stays — voters are told the position, just not the rating.
    */
   hideRatings?: boolean;
   /**
@@ -108,86 +76,18 @@ export function PlayerCard({
   useEffect(() => setPhotoFailed(false), [photoUrl]);
   const showPhoto = !!photoUrl && !photoFailed;
 
-  const [showDetail, setShowDetail] = useState(false);
-  const detailTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
-  const longPressFired = useRef(false);
-
   const [showRadar, setShowRadar] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   function handleFlipClick(e: React.MouseEvent) {
     e.stopPropagation();
     setShowRadar((v) => !v);
   }
 
-  function handleMouseEnter() {
-    if (hideRatings) return;
-    detailTimer.current = setTimeout(() => setShowDetail(true), DETAIL_HOVER_DELAY_MS);
+  function handleInspectClick(e: React.MouseEvent) {
+    e.stopPropagation();
+    setShowModal(true);
   }
-
-  function handleMouseLeave() {
-    if (detailTimer.current) clearTimeout(detailTimer.current);
-    detailTimer.current = null;
-    setShowDetail(false);
-  }
-
-  function handleClick() {
-    // A click is a deliberate action, not an idle hover — cancel any
-    // pending/shown detail popup so it can't surprise-appear afterward.
-    // This card's instance can survive the click unmounted (e.g. a pitch
-    // slot swap re-uses the same component for a different player, since
-    // React keys slots by position, not by occupant), so a timer started
-    // before the click would otherwise still fire for whoever ends up here.
-    if (detailTimer.current) clearTimeout(detailTimer.current);
-    detailTimer.current = null;
-    setShowDetail(false);
-    onClick?.();
-  }
-
-  function handleTouchStart(e: React.TouchEvent) {
-    if (hideRatings) return;
-    // Don't hijack a long press meant for the Edit/Dup/Del buttons or the flip icon.
-    if ((e.target as HTMLElement).closest('.sp-card__actions, .sp-card__flip')) return;
-    const touch = e.touches[0];
-    touchStart.current = { x: touch.clientX, y: touch.clientY };
-    longPressFired.current = false;
-    detailTimer.current = setTimeout(() => {
-      longPressFired.current = true;
-      setShowDetail(true);
-    }, DETAIL_TOUCH_HOLD_DELAY_MS);
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (!touchStart.current || !detailTimer.current) return;
-    const touch = e.touches[0];
-    const dx = touch.clientX - touchStart.current.x;
-    const dy = touch.clientY - touchStart.current.y;
-    if (Math.hypot(dx, dy) > TOUCH_MOVE_CANCEL_PX) {
-      clearTimeout(detailTimer.current);
-      detailTimer.current = null;
-    }
-  }
-
-  function handleTouchEnd(e: React.TouchEvent) {
-    if (detailTimer.current) {
-      clearTimeout(detailTimer.current);
-      detailTimer.current = null;
-    }
-    if (longPressFired.current) {
-      // A peek, not a tap — suppress the synthetic click this touch would
-      // otherwise produce, so it doesn't also trigger tap-to-select/place.
-      e.preventDefault();
-      setShowDetail(false);
-    }
-    touchStart.current = null;
-  }
-
-  useEffect(
-    () => () => {
-      if (detailTimer.current) clearTimeout(detailTimer.current);
-    },
-    [],
-  );
 
   const verified = isStatsVerified(player);
   const verifiedTitle =
@@ -208,13 +108,7 @@ export function PlayerCard({
     <article
       className={classes.join(' ')}
       data-team={team ?? 'none'}
-      onClick={handleClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
+      onClick={onClick}
       draggable={draggable}
       onDragStart={onDragStart}
       role={onClick ? 'button' : undefined}
@@ -258,6 +152,20 @@ export function PlayerCard({
               </svg>
             </button>
           )}
+          {!hideRatings && (
+            <button
+              type="button"
+              className="sp-card__expand"
+              onClick={handleInspectClick}
+              aria-label={`View details for ${player.name}`}
+              title="View details"
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+                <path d="M12.7 12.7 L17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
           <span className="sp-badge">{position}</span>
         </span>
       </div>
@@ -289,32 +197,7 @@ export function PlayerCard({
           {actions}
         </div>
       )}
-      {showDetail && !hideRatings && (
-        <div className="sp-card__detail" role="tooltip">
-          <div className="sp-card__detail-photo">
-            {showPhoto ? <img src={photoUrl} alt="" onError={() => setPhotoFailed(true)} /> : <Monogram name={player.name} />}
-          </div>
-          <div className="sp-card__detail-name">
-            {player.name}
-            {player.nickname && <span className="sp-card__nickname"> ({player.nickname})</span>}
-          </div>
-          <div className="sp-card__detail-meta">
-            <span className="sp-badge">{position}</span>
-            {verified && (
-              <span className="sp-badge sp-badge--verified" title={verifiedTitle}>
-                ✓
-              </span>
-            )}
-            <span className="sp-card__detail-overall">{rating}</span>
-          </div>
-          <div className="sp-card__stats">
-            {STAT_KEYS.map((key) => (
-              <StatBlocks key={key} statKey={key} value={player.stats[key]} />
-            ))}
-          </div>
-          {player.taunt && <p className="sp-card__taunt">&ldquo;{player.taunt}&rdquo;</p>}
-        </div>
-      )}
+      {showModal && <PlayerDetailModal player={player} atPosition={position} onClose={() => setShowModal(false)} />}
     </article>
   );
 }

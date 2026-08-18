@@ -5,6 +5,7 @@ interface ModalProps {
   onClose: () => void;
   ariaLabel: string;
   children: ReactNode;
+  className?: string;
 }
 
 /**
@@ -13,10 +14,15 @@ interface ModalProps {
  * filter — creates a new containing block for fixed-position descendants, silently breaking an
  * in-tree modal's positioning whenever it happens to render inside one of them.
  */
-export function Modal({ onClose, ariaLabel, children }: ModalProps) {
+export function Modal({ onClose, ariaLabel, children, className }: ModalProps) {
   return createPortal(
     <div className="sp-modal-backdrop" onClick={onClose}>
-      <div className="sp-modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={ariaLabel}>
+      <div
+        className={`sp-modal-panel${className ? ` ${className}` : ''}`}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label={ariaLabel}
+      >
         {children}
       </div>
     </div>,

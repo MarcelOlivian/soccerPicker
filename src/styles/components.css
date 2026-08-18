@@ -93,7 +93,8 @@
   background: linear-gradient(var(--sp-verified-tint), var(--sp-verified-tint)), var(--sp-glass-bg);
 }
 
-.sp-card__flip {
+.sp-card__flip,
+.sp-card__expand {
   /* Sits inside .sp-card__head, which is in the click/drag-through
      pointer-events:none list below — pointer-events is inherited, so this
      opts the button itself back in. */
@@ -111,17 +112,20 @@
   cursor: pointer;
 }
 
-.sp-card--compact .sp-card__flip {
+.sp-card--compact .sp-card__flip,
+.sp-card--compact .sp-card__expand {
   width: 14px;
   height: 14px;
 }
 
-.sp-card__flip svg {
+.sp-card__flip svg,
+.sp-card__expand svg {
   width: 10px;
   height: 10px;
 }
 
-.sp-card--compact .sp-card__flip svg {
+.sp-card--compact .sp-card__flip svg,
+.sp-card--compact .sp-card__expand svg {
   width: 8px;
   height: 8px;
 }
@@ -239,74 +243,6 @@
   font-weight: 500;
   color: var(--sp-muted);
   text-transform: none;
-}
-
-/* ---------- hover-and-hold full detail popup ---------- */
-
-.sp-card__detail {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 30;
-  width: 200px;
-  max-width: min(200px, calc(100vw - 24px));
-  background: var(--sp-glass-bg-raised);
-  background-image: var(--sp-grain);
-  background-size: cover, 80px 80px;
-  background-blend-mode: normal, overlay;
-  border: var(--sp-glass-edge);
-  border-radius: var(--sp-radius);
-  box-shadow: var(--sp-glass-shadow-lg);
-  backdrop-filter: blur(var(--sp-glass-blur));
-  -webkit-backdrop-filter: blur(var(--sp-glass-blur));
-  padding: var(--sp-space-3);
-  text-align: left;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.sp-card__detail-photo {
-  aspect-ratio: 1;
-  width: 72px;
-  margin: 0 auto var(--sp-space-2);
-  border: var(--sp-border-soft);
-  background: var(--sp-well);
-  overflow: hidden;
-}
-
-.sp-card__detail-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  filter: grayscale(0.35) sepia(0.12) contrast(1.02);
-}
-
-.sp-card__detail-name {
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  text-align: center;
-  margin-bottom: var(--sp-space-1);
-}
-
-.sp-card__detail-meta {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-space-2);
-  margin-bottom: var(--sp-space-2);
-}
-
-.sp-card__detail-overall {
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.sp-card__detail .sp-card__stats {
-  padding: 0;
-  grid-template-columns: 1fr 1fr;
 }
 
 .sp-card__taunt {
@@ -989,11 +925,9 @@
   overflow-y: auto;
 }
 
-/* A referee popup with no existing precedent in this app (the closest
-   analog, .sp-card__detail, is anchored to its own card, not centered) — so
-   this introduces the app's one full-screen modal pattern. The backdrop
-   itself blurs whatever's behind it — the one place backdrop-filter on the
-   scrim itself makes sense, since there's real content there to sample. */
+/* Shared centered-modal chrome, reused by the Import chooser, the referee event menus, and
+   PlayerDetailModal. The backdrop itself blurs whatever's behind it — the one place
+   backdrop-filter on the scrim itself makes sense, since there's real content there to sample. */
 .sp-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -1036,6 +970,124 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-space-2);
+}
+
+/* Content-heavy modals (PlayerDetailModal) need more room and vertical scroll than the base
+   320px-capped panel used for short text/button content — an opt-in modifier via Modal's
+   `className` prop so the Import/EventMenu/TeamEventMenu modals stay unaffected. Only overrides
+   overflow-y: the base .sp-modal-panel's `overflow: hidden` shorthand still clips horizontally. */
+.sp-modal-panel--wide {
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 64px));
+  overflow-y: auto;
+}
+
+/* ---------- player detail modal ---------- */
+
+.sp-player-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-space-4);
+}
+
+.sp-player-detail__header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-3);
+}
+
+.sp-player-detail__photo {
+  width: 96px;
+  height: 96px;
+  flex-shrink: 0;
+  border: var(--sp-border-soft);
+  background: var(--sp-well);
+  overflow: hidden;
+}
+
+.sp-player-detail__photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(0.35) sepia(0.12) contrast(1.02);
+}
+
+.sp-player-detail__identity {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-player-detail__name {
+  margin: 0 0 var(--sp-space-1);
+  font-size: 16px;
+  letter-spacing: 0.04em;
+}
+
+.sp-player-detail__meta-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-space-2);
+  flex-wrap: wrap;
+}
+
+.sp-player-detail__overall {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.sp-player-detail__close {
+  appearance: none;
+  border: var(--sp-glass-edge);
+  border-radius: var(--sp-radius-sm);
+  background: var(--sp-glass-bg-raised);
+  color: var(--sp-ink);
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Stacked, not side-by-side — a radar chart needs real width for its axis labels to stay
+   legible (the Compare tab's dedicated radar panel gets 420-480px to itself), which two even
+   columns inside this modal's ~480px cap can't give it without cramming. */
+.sp-player-detail__visuals {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-space-3);
+}
+
+.sp-player-detail__visuals .sp-radar-chart {
+  width: 100%;
+  max-width: 280px;
+}
+
+.sp-player-detail__visuals .sp-card__stats {
+  width: 100%;
+  max-width: 320px;
+}
+
+.sp-player-detail__history h4,
+.sp-player-detail__audit h4 {
+  margin: 0 0 var(--sp-space-1);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sp-muted);
+}
+
+.sp-player-detail__history ul,
+.sp-player-detail__audit ul {
+  list-style: none;
+  margin: var(--sp-space-1) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--sp-ink-soft);
 }
 
 /* ---------- attendance stage ---------- */
@@ -1472,17 +1524,6 @@
   transform: translate(-50%, -50%);
   width: var(--sp-slot-w);
   cursor: pointer;
-}
-
-/*
- * `transform` above gives every .sp-slot its own stacking context, so a
- * z-index set on the detail popup (a descendant) can never win against a
- * *sibling* slot — only against other content inside its own slot. Promote
- * the whole slot (popup included) above its siblings whenever its card's
- * popup is open.
- */
-.sp-slot:has(.sp-card__detail) {
-  z-index: 50;
 }
 
 .sp-slot__card {

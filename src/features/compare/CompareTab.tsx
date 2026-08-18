@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Monogram } from '../../components/Monogram';
-import { PlayerCard, usePlayerPhotoUrl } from '../../components/PlayerCard';
+import { PlayerCard } from '../../components/PlayerCard';
 import { RadarChart } from '../../components/RadarChart';
 import { filterAndSortPlayers } from '../../lib/playerSearch';
 import type { PlayerSortKey } from '../../lib/playerSearch';
 import { usePhoneLayout } from '../../lib/useMediaQuery';
+import { usePlayerPhotoUrl } from '../../lib/usePlayerPhotoUrl';
 import { useAppState } from '../../state/AppContext';
 import type { Player } from '../../types';
 
