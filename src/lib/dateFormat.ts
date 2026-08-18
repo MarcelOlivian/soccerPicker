@@ -13,3 +13,12 @@ export function formatAxisDate(ts: number): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   return `${dd}/${mm}`;
 }
+
+/** e.g. 1755255720000 -> "14:32 18.08.2026" (local time, HH:MM DD.MM.YYYY) — for the match event log's "match started" line. */
+export function formatMatchStartedAt(ts: number): string {
+  const d = new Date(ts);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const date = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
+  return `${time} ${date}`;
+}

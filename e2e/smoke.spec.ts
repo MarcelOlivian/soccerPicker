@@ -16,12 +16,15 @@ test('loads the 14-player demo roster', async ({ page }) => {
   await expect(page.locator('.sp-player-grid .sp-card')).toHaveCount(14);
 });
 
-test('runs a full 6-a-side draft, places a player on the board, and updates the balance meter', async ({
+test('runs a full 7-a-side draft, places a player on the board, and updates the balance meter', async ({
   page,
 }) => {
   await page.getByRole('button', { name: /Load 14 demo players/i }).click();
   await page.getByRole('tab', { name: 'Match' }).click();
 
+  // Switch to 7-a-side so all 14 loaded demo players exactly match the formation's
+  // required headcount — Continue to draft is disabled otherwise.
+  await page.getByRole('button', { name: '7-a-side', exact: true }).click();
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
   for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
@@ -40,7 +43,7 @@ test('runs a full 6-a-side draft, places a player on the board, and updates the 
   }
   await expect(page.locator('.sp-draft-header__turn')).toHaveText('DRAFT COMPLETE');
 
-  await page.getByRole('button', { name: /Skip to Field/i }).click();
+  await page.getByRole('button', { name: /Continue to Field/i }).click();
   await expect(page.locator('.sp-balance-meter')).toBeVisible();
 
   const strengthBefore = await page.locator('.sp-balance-meter__label[data-team="A"]').innerText();
@@ -88,6 +91,9 @@ test('exports a roster and match history, and re-imports both after clearing', a
   // Save one match to history before exporting, so the export file carries
   // both a roster and a history entry.
   await page.getByRole('tab', { name: 'Match' }).click();
+  // Switch to 7-a-side so all 14 loaded demo players exactly match the formation's
+  // required headcount — Continue to draft is disabled otherwise.
+  await page.getByRole('button', { name: '7-a-side', exact: true }).click();
   const checkboxes = page.locator('.sp-attendance-row input[type=checkbox]');
   const count = await checkboxes.count();
   for (let i = 0; i < count; i++) await checkboxes.nth(i).check();
@@ -96,7 +102,7 @@ test('exports a roster and match history, and re-imports both after clearing', a
   await page.selectOption('#captain-b', { index: 2 });
   await page.getByRole('button', { name: /Start draft/i }).click();
   await page.getByRole('button', { name: /Auto-draft teams/i }).click();
-  await page.getByRole('button', { name: /Skip to Field/i }).click();
+  await page.getByRole('button', { name: /Continue to Field/i }).click();
   await page.getByRole('button', { name: 'Auto-fill positions' }).click();
   await page.getByRole('button', { name: 'Save to history' }).click();
   await expect(page.getByRole('tab', { name: 'History', selected: true })).toBeVisible();

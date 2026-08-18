@@ -260,6 +260,26 @@ describe('buildEventFeed', () => {
   it('returns an empty feed for an empty event log', () => {
     expect(buildEventFeed([], playerName, teamName)).toEqual([]);
   });
+
+  it('prepends a "Match started" line when clockStartedAt is given', () => {
+    const startedAt = new Date(2026, 7, 18, 14, 32).getTime(); // 18.08.2026 14:32 local
+    const entries = buildEventFeed([], playerName, teamName, startedAt);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].text).toBe('Match started — 14:32 18.08.2026');
+  });
+
+  it('omits the "Match started" line when clockStartedAt is null/undefined', () => {
+    expect(buildEventFeed([], playerName, teamName, null)).toEqual([]);
+    expect(buildEventFeed([], playerName, teamName, undefined)).toEqual([]);
+  });
+
+  it('the "Match started" line stays first, ahead of real events', () => {
+    const startedAt = new Date(2026, 7, 18, 14, 32).getTime();
+    const g = goal('p1', 'A', false, 'g1', 5 * 60_000);
+    const entries = buildEventFeed([g], playerName, teamName, startedAt);
+    expect(entries[0].text).toBe('Match started — 14:32 18.08.2026');
+    expect(entries[1].text).toBe('05:00 GOAL — Marcus');
+  });
 });
 
 describe('formatMatchSummaryForShare', () => {

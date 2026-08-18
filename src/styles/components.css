@@ -756,6 +756,11 @@
   border-color: var(--sp-accent);
 }
 
+.sp-breadcrumb__step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 /* Signals "the draft's done, come take a look" — only while it isn't already the active step. */
 .sp-breadcrumb__step--ready:not(.sp-breadcrumb__step--active) {
   background: rgba(52, 211, 153, 0.22);
@@ -831,9 +836,30 @@
 }
 
 .sp-clock-bar__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 18px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.sp-clock-bar__rec {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sp-danger);
+  animation: sp-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
 
 .sp-clock-bar__controls {
