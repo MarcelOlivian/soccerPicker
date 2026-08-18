@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Modal } from '../../components/Modal';
 import type { FoulType, Player, RestartType } from '../../types';
 
 interface EventMenuProps {
@@ -47,101 +48,99 @@ export function EventMenu({
   }
 
   return (
-    <div className="sp-modal-backdrop" onClick={onCancel}>
-      <div className="sp-modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label={`Record event for ${player.name}`}>
-        {step === 'menu' && (
-          <>
-            <p className="sp-modal-panel__title">{player.name}</p>
-            <div className="sp-modal-panel__actions">
-              <button type="button" className="sp-btn sp-btn--primary" onClick={() => setStep('assist')}>
-                Goal
+    <Modal onClose={onCancel} ariaLabel={`Record event for ${player.name}`}>
+      {step === 'menu' && (
+        <>
+          <p className="sp-modal-panel__title">{player.name}</p>
+          <div className="sp-modal-panel__actions">
+            <button type="button" className="sp-btn sp-btn--primary" onClick={() => setStep('assist')}>
+              Goal
+            </button>
+            <button type="button" className="sp-btn" onClick={() => onRecordGoal(true, null)}>
+              Own goal
+            </button>
+            {isGoalkeeper && (
+              <button type="button" className="sp-btn" onClick={() => setStep('save-shooter')}>
+                Save
               </button>
-              <button type="button" className="sp-btn" onClick={() => onRecordGoal(true, null)}>
-                Own goal
+            )}
+            <button type="button" className="sp-btn sp-btn--danger" onClick={() => setStep('foul-type')}>
+              Foul
+            </button>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      {step === 'assist' && (
+        <>
+          <p className="sp-modal-panel__title">Who assisted?</p>
+          <div className="sp-modal-panel__actions">
+            {teammates.map((t) => (
+              <button type="button" className="sp-btn" key={t.id} onClick={() => onRecordGoal(false, t.id)}>
+                {t.name}
               </button>
-              {isGoalkeeper && (
-                <button type="button" className="sp-btn" onClick={() => setStep('save-shooter')}>
-                  Save
-                </button>
-              )}
-              <button type="button" className="sp-btn sp-btn--danger" onClick={() => setStep('foul-type')}>
-                Foul
+            ))}
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={() => onRecordGoal(false, null)}>
+              No assist
+            </button>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      {step === 'foul-type' && (
+        <>
+          <p className="sp-modal-panel__title">What kind of foul?</p>
+          <div className="sp-modal-panel__actions">
+            <button type="button" className="sp-btn" onClick={() => chooseFoulType('HANDBALL')}>
+              Handball
+            </button>
+            <button type="button" className="sp-btn" onClick={() => chooseFoulType('FOUL_PLAY')}>
+              Foul Play
+            </button>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      {step === 'foul-restart' && (
+        <>
+          <p className="sp-modal-panel__title">Restart?</p>
+          <div className="sp-modal-panel__actions">
+            <button type="button" className="sp-btn" onClick={() => chooseRestart('FREE_KICK')}>
+              Free Kick
+            </button>
+            <button type="button" className="sp-btn" onClick={() => chooseRestart('PENALTY')}>
+              Penalty
+            </button>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      {step === 'save-shooter' && (
+        <>
+          <p className="sp-modal-panel__title">Who attempted to score?</p>
+          <div className="sp-modal-panel__actions">
+            {opposingOnPitch.map((p) => (
+              <button type="button" className="sp-btn" key={p.id} onClick={() => onRecordSave(p.id)}>
+                {p.name}
               </button>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-        {step === 'assist' && (
-          <>
-            <p className="sp-modal-panel__title">Who assisted?</p>
-            <div className="sp-modal-panel__actions">
-              {teammates.map((t) => (
-                <button type="button" className="sp-btn" key={t.id} onClick={() => onRecordGoal(false, t.id)}>
-                  {t.name}
-                </button>
-              ))}
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={() => onRecordGoal(false, null)}>
-                No assist
-              </button>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-        {step === 'foul-type' && (
-          <>
-            <p className="sp-modal-panel__title">What kind of foul?</p>
-            <div className="sp-modal-panel__actions">
-              <button type="button" className="sp-btn" onClick={() => chooseFoulType('HANDBALL')}>
-                Handball
-              </button>
-              <button type="button" className="sp-btn" onClick={() => chooseFoulType('FOUL_PLAY')}>
-                Foul Play
-              </button>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-        {step === 'foul-restart' && (
-          <>
-            <p className="sp-modal-panel__title">Restart?</p>
-            <div className="sp-modal-panel__actions">
-              <button type="button" className="sp-btn" onClick={() => chooseRestart('FREE_KICK')}>
-                Free Kick
-              </button>
-              <button type="button" className="sp-btn" onClick={() => chooseRestart('PENALTY')}>
-                Penalty
-              </button>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-        {step === 'save-shooter' && (
-          <>
-            <p className="sp-modal-panel__title">Who attempted to score?</p>
-            <div className="sp-modal-panel__actions">
-              {opposingOnPitch.map((p) => (
-                <button type="button" className="sp-btn" key={p.id} onClick={() => onRecordSave(p.id)}>
-                  {p.name}
-                </button>
-              ))}
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={() => onRecordSave(null)}>
-                Unclear
-              </button>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
+            ))}
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={() => onRecordSave(null)}>
+              Unclear
+            </button>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
   );
 }

@@ -5,14 +5,13 @@
   width: var(--sp-card-w);
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 140px 140px;
+  background-size: cover, 70px 70px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur-sm));
   -webkit-backdrop-filter: blur(var(--sp-glass-blur-sm));
-  overflow: hidden; /* clips the grain tile + .sp-card__bar strip to the rounded corners */
   display: flex;
   flex-direction: column;
 }
@@ -59,6 +58,7 @@
 .sp-card__bar {
   height: 4px;
   background: var(--sp-ink);
+  border-radius: var(--sp-radius) var(--sp-radius) 0 0;
 }
 
 .sp-card[data-team='A'] .sp-card__bar {
@@ -253,7 +253,7 @@
   max-width: min(200px, calc(100vw - 24px));
   background: var(--sp-glass-bg-raised);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -333,7 +333,7 @@
   width: 200px;
   background: var(--sp-glass-bg-raised);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -880,7 +880,7 @@
   border-radius: var(--sp-radius);
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur));
@@ -960,7 +960,7 @@
   border-radius: var(--sp-radius);
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur));
@@ -1013,7 +1013,7 @@
      again) reads muddy. */
   background: var(--sp-glass-bg-raised);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -1083,7 +1083,7 @@
   border-radius: var(--sp-radius);
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur));
@@ -1136,7 +1136,7 @@
 .sp-draft-column {
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -1269,7 +1269,7 @@
   border-radius: var(--sp-radius);
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur));
@@ -1357,14 +1357,13 @@
 .sp-team-column {
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
   box-shadow: var(--sp-glass-shadow);
   backdrop-filter: blur(var(--sp-glass-blur));
   -webkit-backdrop-filter: blur(var(--sp-glass-blur));
-  overflow: hidden;
   padding: var(--sp-space-3);
   min-height: 200px;
 }
@@ -1418,11 +1417,10 @@
       var(--sp-pitch-green-alt) 80px
     );
   background-blend-mode: overlay, normal;
-  background-size: 160px 160px, auto;
+  background-size: 80px 80px, auto;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius-lg);
-  box-shadow: 0 0 0 1px rgba(126, 224, 67, 0.12), 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 60px rgba(47, 166, 63, 0.25);
-  overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(126, 224, 67, 0.12), 0 12px 40px rgba(0, 0, 0, 0.5);
   grid-area: field;
 }
 
@@ -1646,7 +1644,7 @@
 .sp-compare-panel {
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -1662,7 +1660,7 @@
 .sp-compare-radar-view {
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);
@@ -1731,7 +1729,7 @@
 .sp-evolution-detail-view {
   background: var(--sp-glass-bg);
   background-image: var(--sp-grain);
-  background-size: cover, 160px 160px;
+  background-size: cover, 80px 80px;
   background-blend-mode: normal, overlay;
   border: var(--sp-glass-edge);
   border-radius: var(--sp-radius);

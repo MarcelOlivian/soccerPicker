@@ -3,6 +3,7 @@ import { EXPECTED_CSV_HEADER, parsePlayerCsv } from '../lib/csvImport';
 import { downloadRosterExport, parseRosterImportFile } from '../lib/exportImport';
 import { buildShareLink, parseShareLink } from '../lib/shareLink';
 import { useAppState } from '../state/AppContext';
+import { Modal } from './Modal';
 
 /**
  * Export / import / share-link controls, shown in the app header so they're
@@ -137,26 +138,24 @@ export function HeaderControls() {
         Import
       </button>
       {showImportMenu && (
-        <div className="sp-modal-backdrop" onClick={() => setShowImportMenu(false)}>
-          <div className="sp-modal-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Import">
-            <p className="sp-modal-panel__title">Import</p>
-            <div className="sp-modal-panel__actions">
-              <button type="button" className="sp-btn" onClick={openJsonPicker}>
-                Import roster (JSON)
-              </button>
-              <button type="button" className="sp-btn" onClick={openCsvPicker}>
-                Import stats sheet (CSV)
-              </button>
-              <p className="sp-hint">CSV header: {EXPECTED_CSV_HEADER}</p>
-              <p className="sp-hint">
-                Scores are on a 1–5 scale. OVR is calculated automatically and Observations aren't imported.
-              </p>
-              <button type="button" className="sp-btn sp-btn--ghost" onClick={() => setShowImportMenu(false)}>
-                Cancel
-              </button>
-            </div>
+        <Modal onClose={() => setShowImportMenu(false)} ariaLabel="Import">
+          <p className="sp-modal-panel__title">Import</p>
+          <div className="sp-modal-panel__actions">
+            <button type="button" className="sp-btn" onClick={openJsonPicker}>
+              Import roster (JSON)
+            </button>
+            <button type="button" className="sp-btn" onClick={openCsvPicker}>
+              Import stats sheet (CSV)
+            </button>
+            <p className="sp-hint">CSV header: {EXPECTED_CSV_HEADER}</p>
+            <p className="sp-hint">
+              Scores are on a 1–5 scale. OVR is calculated automatically and Observations aren't imported.
+            </p>
+            <button type="button" className="sp-btn sp-btn--ghost" onClick={() => setShowImportMenu(false)}>
+              Cancel
+            </button>
           </div>
-        </div>
+        </Modal>
       )}
       <input
         ref={fileInputRef}
