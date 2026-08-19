@@ -40,7 +40,7 @@ export function CsvImportReviewModal({ rows, onConfirm, onCancel }: CsvImportRev
   }
 
   return (
-    <Modal onClose={onCancel} ariaLabel="Review CSV import" className="sp-modal-panel--wide">
+    <Modal onClose={onCancel} ariaLabel="Review CSV import" className="sp-modal-panel--xwide">
       <p className="sp-modal-panel__title">Review CSV import</p>
       <p className="sp-hint">
         {existingCount} existing player{existingCount === 1 ? '' : 's'} will be updated, {newCount} new player
@@ -77,9 +77,32 @@ export function CsvImportReviewModal({ rows, onConfirm, onCancel }: CsvImportRev
                   {row.nickname && <span className="sp-card__nickname"> ({row.nickname})</span>}
                 </td>
                 <td>{row.position}</td>
-                {STAT_KEYS.map((key) => (
-                  <td key={key}>{row.stats[key]}</td>
-                ))}
+                {STAT_KEYS.map((key) => {
+                  const value = row.stats[key];
+                  const previousValue = row.existingPlayer?.stats[key];
+                  const diff = previousValue !== undefined ? value - previousValue : 0;
+                  return (
+                    <td key={key}>
+                      {value}
+                      {diff > 0 && (
+                        <span
+                          className="sp-csv-review__stat-arrow sp-csv-review__stat-arrow--up"
+                          title={`Up from ${previousValue}`}
+                        >
+                          ▲
+                        </span>
+                      )}
+                      {diff < 0 && (
+                        <span
+                          className="sp-csv-review__stat-arrow sp-csv-review__stat-arrow--down"
+                          title={`Down from ${previousValue}`}
+                        >
+                          ▼
+                        </span>
+                      )}
+                    </td>
+                  );
+                })}
                 <td>
                   {row.existingPlayer ? (
                     <span className="sp-badge sp-badge--existing">Existing</span>
