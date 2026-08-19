@@ -56,7 +56,7 @@ export interface Player {
   createdAt: number;
 }
 
-export type StatHistorySource = 'vote' | 'manual' | 'suggestion';
+export type StatHistorySource = 'vote' | 'manual' | 'suggestion' | 'csv';
 
 export interface StatHistoryEntry {
   /** Date.now() at the moment this change was saved. */

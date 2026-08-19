@@ -75,6 +75,9 @@ function describeStatHistoryEntry(entry: StatHistoryEntry, previousStats: Player
   if (entry.source === 'suggestion') {
     return `${date}: Performance suggestion accepted${entry.note ? ` — ${entry.note}` : ''} (${changeList}).`;
   }
+  if (entry.source === 'csv') {
+    return `${date}: Updated from CSV import (${changeList}).`;
+  }
   return `${date}: Manually edited (${changeList}).`;
 }
 

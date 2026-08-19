@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { EXPECTED_CSV_HEADER, parsePlayerCsv } from '../lib/csvImport';
+import { EXPECTED_CSV_HEADER, buildPlayerFromCsvRow, parseCsvImportRows } from '../lib/csvImport';
+import type { CsvImportRow } from '../lib/csvImport';
 import { downloadRosterExport, parseRosterImportFile } from '../lib/exportImport';
 import { buildShareLink, parseShareLink } from '../lib/shareLink';
+import { appendStatHistoryEntry } from '../lib/statHistory';
 import { useAppState } from '../state/AppContext';
+import { CsvImportReviewModal } from './CsvImportReviewModal';
 import { Modal } from './Modal';
 
 /**
@@ -17,6 +20,7 @@ export function HeaderControls() {
   const [notice, setNotice] = useState<string | null>(null);
   const [noticeKind, setNoticeKind] = useState<'info' | 'danger'>('info');
   const [showImportMenu, setShowImportMenu] = useState(false);
+  const [csvReviewRows, setCsvReviewRows] = useState<CsvImportRow[] | null>(null);
   const handledIncomingLink = useRef(false);
 
   function announce(message: string, kind: 'info' | 'danger' = 'info') {
@@ -85,19 +89,32 @@ export function HeaderControls() {
   async function handleImportCsvFile(file: File) {
     try {
       const text = await file.text();
-      const players = parsePlayerCsv(text);
-      if (players.length === 0) {
+      const rows = parseCsvImportRows(text, state.players);
+      if (rows.length === 0) {
         announce('That CSV has no player rows to import.', 'danger');
         return;
       }
-      const replace = confirm(
-        `This CSV has ${players.length} player(s).\n\nOK to REPLACE your current roster, or Cancel to MERGE it into your existing one.`,
-      );
-      dispatch({ type: 'MERGE_PLAYERS', players, mode: replace ? 'replace' : 'merge' });
-      announce(`Imported ${players.length} player(s) from CSV (${replace ? 'replaced' : 'merged'}).`);
+      setCsvReviewRows(rows);
     } catch (err) {
       announce(err instanceof Error ? err.message : 'Could not read that CSV file.', 'danger');
     }
+  }
+
+  function handleConfirmCsvImport(acceptedRows: CsvImportRow[]) {
+    let updated = 0;
+    let created = 0;
+    for (const row of acceptedRows) {
+      const player = buildPlayerFromCsvRow(row);
+      if (row.existingPlayer) {
+        dispatch({ type: 'UPDATE_PLAYER', player: appendStatHistoryEntry(row.existingPlayer, player, 'csv') });
+        updated++;
+      } else {
+        dispatch({ type: 'ADD_PLAYER', player });
+        created++;
+      }
+    }
+    setCsvReviewRows(null);
+    announce(`Imported from CSV: ${created} new player(s), ${updated} updated.`);
   }
 
   async function handleCopyLink() {
@@ -149,13 +166,21 @@ export function HeaderControls() {
             </button>
             <p className="sp-hint">CSV header: {EXPECTED_CSV_HEADER}</p>
             <p className="sp-hint">
-              Scores are on a 1–5 scale. OVR is calculated automatically and Observations aren't imported.
+              Scores are on a 1–5 scale. OVR is calculated automatically and Observations aren't imported. Existing
+              players (matched by name) are updated in place; new names create new players.
             </p>
             <button type="button" className="sp-btn sp-btn--ghost" onClick={() => setShowImportMenu(false)}>
               Cancel
             </button>
           </div>
         </Modal>
+      )}
+      {csvReviewRows && (
+        <CsvImportReviewModal
+          rows={csvReviewRows}
+          onConfirm={handleConfirmCsvImport}
+          onCancel={() => setCsvReviewRows(null)}
+        />
       )}
       <input
         ref={fileInputRef}

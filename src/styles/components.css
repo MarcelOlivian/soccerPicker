@@ -163,6 +163,16 @@
   color: var(--sp-accent);
 }
 
+.sp-badge--existing {
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
+.sp-badge--new {
+  border-color: var(--sp-accent);
+  color: var(--sp-accent);
+}
+
 .sp-card__overall {
   font-size: 22px;
   font-weight: 700;
