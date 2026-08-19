@@ -128,16 +128,30 @@ function cellAt(row: string[], idx: number): string {
   return idx >= 0 ? (row[idx] ?? '') : '';
 }
 
+export interface CsvImportRow {
+  /** Stable React key for one row within a single import session — not a Player id. */
+  key: string;
+  name: string;
+  nickname?: string;
+  position: Position;
+  stats: PlayerStats;
+  taunt?: string;
+  /** The current roster player this row matches by name (case-insensitive, trimmed) — undefined for a new player. */
+  existingPlayer?: Player;
+}
+
 /**
- * Parses the group's stats-sheet CSV export into fresh Players. Columns
- * are matched by name (case-insensitive, trimmed), not position, so a
- * reordered header still works, and an individually renamed/missing
- * column just makes that one field default instead of invalidating the
- * whole file. Throws only for structural problems — an empty/unparseable
- * file, or no "Name" column in the header; a bad value in a single cell
- * never throws, it falls back to a default.
+ * Parses the group's stats-sheet CSV export into review rows, matched
+ * against `existingPlayers` by name (case-insensitive, trimmed — the same
+ * normalization MERGE_PLAYERS already uses), so an already-rostered player
+ * can be updated in place instead of duplicated. Columns are matched by
+ * header name, not position, so a reordered header still works, and an
+ * individually renamed/missing column just makes that one field default
+ * instead of invalidating the whole file. Throws only for structural
+ * problems — an empty/unparseable file, or no "Name" column in the header;
+ * a bad value in a single cell never throws, it falls back to a default.
  */
-export function parsePlayerCsv(csvText: string): Player[] {
+export function parseCsvImportRows(csvText: string, existingPlayers: Player[]): CsvImportRow[] {
   const rows = parseCsvRows(csvText);
   if (rows.length === 0) {
     throw new Error(`That file doesn't look like a SquadRef stats CSV. Expected header: ${EXPECTED_CSV_HEADER}`);
@@ -157,7 +171,9 @@ export function parsePlayerCsv(csvText: string): Player[] {
   const statIdx = {} as Record<StatKey, number>;
   for (const key of STAT_KEYS) statIdx[key] = header.indexOf(STAT_COLUMNS[key]);
 
-  const players: Player[] = [];
+  const byName = new Map(existingPlayers.map((p) => [p.name.trim().toLowerCase(), p]));
+
+  const importRows: CsvImportRow[] = [];
   for (const row of rows.slice(1)) {
     if (row.every((cell) => cell.trim() === '')) continue; // fully blank data row
 
@@ -170,16 +186,45 @@ export function parsePlayerCsv(csvText: string): Player[] {
     const stats = {} as PlayerStats;
     for (const key of STAT_KEYS) stats[key] = parseStatCell(cellAt(row, statIdx[key]));
 
-    players.push({
-      id: crypto.randomUUID(),
+    importRows.push({
+      key: crypto.randomUUID(),
       name,
       nickname,
       position,
       stats,
       taunt,
-      createdAt: Date.now(),
+      existingPlayer: byName.get(name.trim().toLowerCase()),
     });
   }
 
-  return players;
+  return importRows;
+}
+
+/**
+ * Builds the Player to dispatch for one accepted review row. A matched row
+ * preserves everything the CSV doesn't carry (id, createdAt, photoUrl,
+ * photoKey, statsVerifiedBy, statsVerifiedAt, statHistory) and overwrites
+ * only the fields the sheet actually supplies. A new row builds a fresh
+ * Player exactly like the old CSV import always did.
+ */
+export function buildPlayerFromCsvRow(row: CsvImportRow): Player {
+  if (row.existingPlayer) {
+    return {
+      ...row.existingPlayer,
+      name: row.name,
+      nickname: row.nickname,
+      position: row.position,
+      stats: row.stats,
+      taunt: row.taunt,
+    };
+  }
+  return {
+    id: crypto.randomUUID(),
+    name: row.name,
+    nickname: row.nickname,
+    position: row.position,
+    stats: row.stats,
+    taunt: row.taunt,
+    createdAt: Date.now(),
+  };
 }

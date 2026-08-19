@@ -163,6 +163,16 @@
   color: var(--sp-accent);
 }
 
+.sp-badge--existing {
+  border-color: var(--sp-ok);
+  color: var(--sp-ok);
+}
+
+.sp-badge--new {
+  border-color: var(--sp-accent);
+  color: var(--sp-accent);
+}
+
 .sp-card__overall {
   font-size: 22px;
   font-weight: 700;
@@ -1002,6 +1012,30 @@
    320px-capped panel used for short text/button content — an opt-in modifier via Modal's
    `className` prop so the Import/EventMenu/TeamEventMenu modals stay unaffected. Only overrides
    overflow-y: the base .sp-modal-panel's `overflow: hidden` shorthand still clips horizontally. */
+/* Wider still, for the CSV import review table — a 6-stat-column table needs more
+   horizontal room than the 480px PlayerDetailModal cap gives it before scrolling
+   sideways. Own modifier (not a --wide tweak) so PlayerDetailModal is unaffected. */
+.sp-modal-panel--xwide {
+  max-width: min(920px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 64px));
+  overflow-y: auto;
+}
+
+.sp-csv-review__stat-arrow {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 9px;
+  line-height: 1;
+}
+
+.sp-csv-review__stat-arrow--up {
+  color: var(--sp-ok);
+}
+
+.sp-csv-review__stat-arrow--down {
+  color: var(--sp-danger);
+}
+
 .sp-modal-panel--wide {
   max-width: min(480px, calc(100vw - 32px));
   max-height: min(640px, calc(100vh - 64px));

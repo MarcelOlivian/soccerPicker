@@ -138,4 +138,13 @@ describe('auditLogLines', () => {
     expect(lines[0]).toContain('Performance suggestion accepted — Averaging 1.6 goals/match as ATT.');
     expect(lines[1]).toContain('Manually edited');
   });
+
+  it('describes a csv entry as "Updated from CSV import"', () => {
+    const statHistory: StatHistoryEntry[] = [{ at: 1000, stats: makeStats({ shooting: 4 }), source: 'csv' }];
+    const player = makePlayer({ stats: makeStats({ shooting: 4 }), statHistory });
+    const lines = auditLogLines(player);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('Updated from CSV import');
+    expect(lines[0]).toContain('SHO 4');
+  });
 });
