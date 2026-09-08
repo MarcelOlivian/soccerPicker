@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ConnectionChip } from './components/ConnectionChip';
 import { HeaderControls } from './components/HeaderControls';
 import { Tabs } from './components/Tabs';
+import { AboutTab } from './features/about/AboutTab';
 import { CompareTab } from './features/compare/CompareTab';
 import { EvolutionTab } from './features/evolution/EvolutionTab';
 import { HistoryTab } from './features/history/HistoryTab';
@@ -12,7 +13,7 @@ import { AppProvider, useAppState } from './state/AppContext';
 import { LiveProvider } from './state/LiveContext';
 import { VotingProvider } from './state/VotingContext';
 
-type TabId = 'setup' | 'match' | 'history' | 'compare' | 'evolution';
+type TabId = 'setup' | 'match' | 'history' | 'compare' | 'evolution' | 'about';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'setup', label: 'Setup' },
@@ -20,6 +21,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'history', label: 'History' },
   { id: 'compare', label: 'Compare' },
   { id: 'evolution', label: 'Evolution' },
+  { id: 'about', label: 'About' },
 ];
 
 export default function App() {
@@ -91,6 +93,7 @@ function AppShell() {
         {activeTab === 'history' && <HistoryTab />}
         {activeTab === 'compare' && <CompareTab />}
         {activeTab === 'evolution' && <EvolutionTab />}
+        {activeTab === 'about' && <AboutTab />}
       </main>
     </div>
   );
